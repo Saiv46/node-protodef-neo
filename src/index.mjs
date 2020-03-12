@@ -27,7 +27,7 @@ if (cluster.isMaster) {
   }
 }
 
-async function getAvailableWorker() {
+async function getAvailableWorker () {
   for (const id in workers) {
     const worker = workers[id]
     if (workerStatus.get(worker)) return worker
@@ -35,7 +35,7 @@ async function getAvailableWorker() {
   // No workers available, sorry
   return new Promise(done => setTimeout(() => done(getAvailableWorker()), 10))
 }
-async function callWorker(data, worker) {
+async function callWorker (data, worker) {
   if (isWorker) return processMessage(data)
   worker = worker || await getAvailableWorker()
   worker.send(data)
@@ -55,10 +55,9 @@ let protocolData
 let interpreter
 let compiler
 
-function processMessage({ id, data, buffer, protocol }) {
+function processMessage ({ id, data, buffer, protocol }) {
   if (protocol) {
     interpreter = new Interpreter(protocol)
     // compiler = new Compiler(protocol)
-    return
   }
 }

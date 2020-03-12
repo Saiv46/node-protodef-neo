@@ -1,12 +1,11 @@
-import { void as Void } from './utils.mjs'
-import { container } from './structures.mjs'
+import { bool, void as Void } from './primitives.mjs'
 import { Complex } from './_shared.mjs'
 
 class Switch extends Complex {
   constructor ({ compareTo, compareToValue, fields, default: _default }, context) {
     super(context)
     this.fields = {}
-    for (const [ compare, type ] of Object.entries(fields)) {
+    for (const [compare, type] of Object.entries(fields)) {
       this.fields[compare] = this.constructDatatype(type)
     }
     this.default = this.constructDatatype(_default || Void)
@@ -33,24 +32,32 @@ class Switch extends Complex {
 }
 export { Switch as switch }
 
-export class option {
-  constructor (type, context) {
-    this.container = new container([
-      { name: 'present', type: 'bool' },
-      {
-        name: 'valueof',
-        type: [
-          'switch',
-          {
-            compareTo: 'present',
-            fields: { '1': type }
-          }
-        ]
-      }
-    ], context)
+export class option extends Complex {
+  constructor ({ type }, context) {
+    super(context)
+    this.bool = this.constructDatatype(bool)
+    this.type = this.constructDatatype(type)
   }
-  read (buf) { return this.container.read(buf).valueof }
-  write (buf, val) { this.container.write(buf, { present: true, valueof: val }) }
-  sizeRead (buf) { return this.container.sizeRead(buf) }
-  sizeWrite (val) { return this.container.sizeWrite({ present: true, valueof: val }) }
+
+  read (buf) {
+    return this.bool.read(buf)
+      ? this.type.read(buf.slice(this.bool.sizeRead(buf)))
+      : undefined
+  }
+
+  write (buf, val) {
+    const present = val !== undefined && val !== null
+    this.bool.write(buf, present)
+    if (present) this.type.write(buf.slice(this.bool.sizeWrite(present)), val)
+  }
+
+  sizeRead (buf) {
+    const i = this.bool.sizeRead(buf)
+    return (this.bool.read(buf) ? this.type.sizeRead(buf.slice(i)) : 0) + i
+  }
+
+  sizeWrite (val) {
+    const present = val !== undefined && val !== null
+    return this.bool.sizeWrite(present) + (present ? this.type.sizeWrite(val) : 0)
+  }
 }

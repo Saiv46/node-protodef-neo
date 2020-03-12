@@ -1,20 +1,26 @@
-import test from 'ava'
-import { testType } from '../../src/shared.mjs'
-import * as numeric from '../../src/datatypes/numeric.mjs'
-const setup = (k, v, b, o = {}) => {
-	testType(numeric[k], v, b, o, test)
-	if (!k.startsWith('l')) setup(`l${k}`, v, b, o)
+import testType from '../_test.mjs'
+import * as num from '../../src/datatypes/numeric.mjs'
+const test = (k, value, bytes) => {
+  testType({ type: num[k], value, bytes })
+  if (!k.startsWith('l')) test(`l${k}`, value, bytes)
 }
+const setup = (name, type, value, bytes, params) => testType({
+  name, type, value, bytes, params
+})
 
-setup('i8', 2**7-1, 1)
-setup('u8', 2**8-1, 1)
-setup('i16', 2**15-1, 2)
-setup('u16', 2**16-1, 2)
-setup('i32', 2**31-1, 4)
-setup('u32', 2**32-1, 4)
-setup('i64', 2n**63n-1n, 8)
-setup('u64', 2n**64n-1n, 8)
-setup('f32', 1.2*(10**-31), 4)
-setup('f64', 2.3*(10**-63), 8)
-setup('varint', 300, 2)
-setup('int', 0xffffff, 3, { size: 3 })
+test('i8', 2 ** 7 - 1, 1)
+test('u8', 2 ** 8 - 1, 1)
+test('i16', 2 ** 15 - 1, 2)
+test('u16', 2 ** 16 - 1, 2)
+test('i32', 2 ** 31 - 1, 4)
+test('u32', 2 ** 32 - 1, 4)
+test('i64', 2n ** 63n - 1n, 8)
+test('u64', 2n ** 64n - 1n, 8)
+test('f32', 1.2 * (10 ** -31), 4)
+test('f64', 2.3 * (10 ** -63), 8)
+setup('varint ( short )', num.varint, 127, 1)
+setup('lvarint ( short )', num.lvarint, 300, 2)
+setup('varint ( long )', num.varint, 2 ** 48, 7)
+setup('lvarint ( long )', num.lvarint, 2 ** 50, 8)
+setup('int ( 3 bytes )', num.int, 2 ** 24 - 1, 3, { size: 3 })
+setup('lint ( 6 bytes )', num.lint, 2 ** 48 - 1, 6, { size: 6 })

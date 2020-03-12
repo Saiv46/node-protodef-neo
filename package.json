@@ -8,7 +8,7 @@
     "start": "node -r esm main.js",
     "coverage": "nyc ava",
     "test": "ava",
-    "bench": "exit",
+    "bench": "cross-env NODE_ENV=benchmark ava --serial --timeout=1m",
     "lint": "standard --fix"
   },
   "repository": {
@@ -19,7 +19,7 @@
   "author": "Saiv46",
   "license": "MIT",
   "engines": {
-    "node": ">=12"
+    "node": ">=10"
   },
   "standard": {
     "globals": [
@@ -27,6 +27,7 @@
     ]
   },
   "ava": {
+    "verbose": true,
     "require": [
       "esm"
     ]
@@ -35,15 +36,16 @@
     "cjs": true,
     "await": true
   },
-  "bugs": {
-    "url": "https://github.com/Saiv46/node-protodef-neo/issues"
-  },
+  "bugs": "https://github.com/Saiv46/node-protodef-neo/issues",
   "homepage": "https://github.com/Saiv46/node-protodef-neo#readme",
   "dependencies": {
+    "bit-buffer": "^0.2.4",
     "protodef-validator": "^1.2.3"
   },
   "devDependencies": {
-    "ava": "^3.0.0",
+    "ava": "^3.5.0",
+    "chuhai": "^1.2.0",
+    "cross-env": "^7.0.2",
     "esm": "^3.2.25",
     "nyc": "^15.0.0",
     "standard": "^14.3.1"

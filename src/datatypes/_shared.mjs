@@ -19,16 +19,21 @@ export class Complex {
   constructor (context = new Context()) {
     this.context = context
   }
+
   constructDatatype (Type, params = {}) {
     if (Array.isArray(Type)) {
-      [ Type, params ] = Type
+      [Type, params] = Type
     }
-    for (let key in params) {
-      if (!key.toLowerCase().endsWith("type")) continue
+    for (const key in params) {
+      if (!['type', 'countType'].includes(key)) continue
       params[key] = this.constructDatatype(params[key])
     }
     return new Type(params, this.context)
   }
+}
+
+export function constructDatatype (...args) {
+  return new Complex().constructDatatype(...args)
 }
 
 export class Countable extends Complex {

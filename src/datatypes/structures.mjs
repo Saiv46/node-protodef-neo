@@ -11,7 +11,7 @@ export class array extends Countable {
     const res = []
     const len = this.readCount(buf)
     for (let i = 0, b = this.sizeReadCount(buf); i < len; i++) {
-      res.push(this.type.read(buf.slice(b)))
+      res.push(this.type.read(buf.slice(b, b += this.type.sizeRead(buf.slice(b)))))
     }
     return res
   }
@@ -34,7 +34,7 @@ export class array extends Countable {
 
   sizeWrite (val) {
     let size = this.sizeWriteCount(val.length)
-    for (const v in val) {
+    for (const v of val) {
       size += this.type.sizeWrite(v)
     }
     return size
@@ -63,14 +63,14 @@ export class container extends Complex {
   constructor (fields, context) {
     super(context)
     this.fields = fields.map(v => (
-      [ v.name, this.constructDatatype(v.type) ]
+      [v.name, this.constructDatatype(v.type)]
     ))
   }
 
   read (buf) {
     const res = {}
     let b = 0
-    for (const [ name, type ] of this.fields) {
+    for (const [name, type] of this.fields) {
       const value = type.read(buf.slice(b, b += type.sizeRead(buf.slice(b))))
       this.context.set(name, value)
       res[name] = value
@@ -80,7 +80,7 @@ export class container extends Complex {
 
   write (buf, val) {
     let b = 0
-    for (const [ name, type ] of this.fields) {
+    for (const [name, type] of this.fields) {
       const value = val[name]
       type.write(buf.slice(b, b += type.sizeWrite(value)), value)
       this.context.set(name, value)
@@ -89,7 +89,7 @@ export class container extends Complex {
 
   sizeRead (buf) {
     let b = 0
-    for (const [ , type ] of this.fields) {
+    for (const [, type] of this.fields) {
       b += type.sizeRead(buf.slice(b))
     }
     return b
@@ -97,7 +97,7 @@ export class container extends Complex {
 
   sizeWrite (val) {
     let b = 0
-    for (const [ name, type ] of this.fields) {
+    for (const [name, type] of this.fields) {
       b += type.sizeWrite(val[name])
     }
     return b

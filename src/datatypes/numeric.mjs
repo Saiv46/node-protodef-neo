@@ -1,10 +1,8 @@
-class Numeric {
-  static get type () { return Number }
-}
+class Numeric {}
 
 class Byte extends Numeric {
-  sizeRead (buf) { return 1 }
-  sizeWrite (val) { return 1 }
+  sizeRead () { return 1 }
+  sizeWrite () { return 1 }
 }
 export class i8 extends Byte {
   read (buf) { return buf.readInt8() }
@@ -18,8 +16,8 @@ export class li8 extends i8 {}
 export class lu8 extends u8 {}
 
 class Byte2 extends Numeric {
-  sizeRead (buf) { return 2 }
-  sizeWrite (val) { return 2 }
+  sizeRead () { return 2 }
+  sizeWrite () { return 2 }
 }
 export class i16 extends Byte2 {
   read (buf) { return buf.readInt16BE() }
@@ -39,8 +37,8 @@ export class lu16 extends u16 {
 }
 
 class Word extends Numeric {
-  sizeRead (buf) { return 4 }
-  sizeWrite (val) { return 4 }
+  sizeRead () { return 4 }
+  sizeWrite () { return 4 }
 }
 export class i32 extends Word {
   read (buf) { return buf.readInt32BE() }
@@ -69,8 +67,8 @@ export class lf32 extends f32 {
 }
 
 class Double extends Numeric {
-  sizeRead (buf) { return 8 }
-  sizeWrite (val) { return 8 }
+  sizeRead () { return 8 }
+  sizeWrite () { return 8 }
 }
 class Long extends Double {
   static get type () { return BigInt }
@@ -129,24 +127,27 @@ export class varint extends Numeric {
     }
     return res
   }
+
   write (buf, val) {
-    const INT = Math.pow(2, 31)
+    const INT = Math.pow(2, 31) - 1
     let i = 0
-    while (val >= INT) {
+    while (val > INT) {
       buf[i++] = (val & 0xFF) | 0x80
       val /= 128
     }
-    while (val >= 0x80) {
+    while (val > 0x7F) {
       buf[i++] = (val & 0xFF) | 0x80
       val >>>= 7
     }
     buf[i] = val | 0
   }
+
   sizeRead (buf) {
     let i = 0
     while (buf[i++] & 0x80) {}
     return i
   }
+
   sizeWrite (val) {
     return Math.ceil(Math.log2(val) / 7)
   }
@@ -180,13 +181,14 @@ export class lvarint extends varint {
 }
 
 export class int extends Numeric {
-  constructor({ size, signed }) {
+  constructor ({ size, signed }) {
     super()
     this.size = size | 0
     if (signed) {
       throw new Error('Not implemented here')
     }
   }
+
   read (buf) {
     const l = this.size
     let res = 0
@@ -195,12 +197,14 @@ export class int extends Numeric {
     }
     return res
   }
+
   write (buf, val) {
     const l = this.size
     for (let i = 0; i < l; i++) {
       buf[i] = (val / Math.pow(2, i * 8)) & 0xFF
     }
   }
+
   sizeRead (buf) { return this.size }
   sizeWrite (val) { return this.size }
 }
@@ -213,6 +217,7 @@ export class lint extends int {
     }
     return res
   }
+
   write (buf, val) {
     const l = this.size
     for (let i = 0; i < l; i++) {

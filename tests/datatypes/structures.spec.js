@@ -1,13 +1,28 @@
-import test from 'ava'
-import { testType } from '../../src/shared.mjs'
-import { u8 } from '../../src/datatypes/numeric.mjs'
-import { cstring } from '../../src/datatypes/primitives.mjs'
-import * as structures from '../../src/datatypes/structures.mjs'
-const setup = (k, v, b, o) => testType(structures[k], v, b, o, test)
+import testType from '../_test.mjs'
+import { u8, u32, varint } from '../../src/datatypes/numeric.mjs'
+import { pstring } from '../../src/datatypes/utils.mjs'
+import { array, count, container } from '../../src/datatypes/structures.mjs'
+const setup = (name, type, value, bytes, params) => testType({
+  name, type, value, bytes, params
+})
+const arr = Array(5).fill(0).map((_, i) => 2 ** (8 * i) - 1)
+const obj = { id: 2 ** 31, gender: 255, subgender: 301 }
 
-setup('array', [255, 255, 255], 4, { type: u8, countType: u8 })
-setup('count', 42, 1, { type: u8, countFor: 'someField' })
-setup('container', { name: 'Saiv46', level: 80 }, 8, [
-	{ name: 'name', type: cstring },
-	{ name: 'level', type: u8 }
+setup('array ( 4 x u8 )', array, [255, 255, 255, 255], 4, { type: u8, count: 4 })
+setup('array ( 5 x u32 + varint )', array, arr, 21, { type: u32, countType: varint })
+setup('count', count, 42, 1, { type: u8, countFor: 'someField' })
+setup('container ( varint, u8, u32 )', container, obj, 7, [
+  { name: 'id', type: u32 },
+  { name: 'gender', type: u8 },
+  { name: 'subgender', type: varint }
+])
+setup('container ( u8, pstring )', container, { name: 'Saiv46', length: 6 }, 7, [
+  { name: 'length', type: u8 },
+  {
+    name: 'name',
+    type: [
+      pstring,
+      { count: 'length' }
+    ]
+  }
 ])

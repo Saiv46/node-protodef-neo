@@ -8,12 +8,16 @@ export default class ProtocolInterpreter extends Protocol {
       this.types[name] = type
       return
     }
-    const [ base, data ] = type
-    function processData(data) {
-      data.countType = data.countType && this.types[data.countType]
+    let [base, data] = type
+    function processData (data) {
+      if (data.countType) {
+        data.countType = Array.isArray(data.type)
+          ? [this.types[data.type[0]], processData(data.type[1])]
+          : this.types[data.type]
+      }
       if (data.type) {
         data.type = Array.isArray(data.type)
-          ? [ this.types[data.type[0]], processData(data.type[1]) ]
+          ? [this.types[data.type[0]], processData(data.type[1])]
           : this.types[data.type]
       }
       return data
