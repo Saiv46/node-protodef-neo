@@ -1,0 +1,51 @@
+{
+  "name": "node-protodef-neo",
+  "version": "1.0.0",
+  "description": "",
+  "module": "main.js",
+  "main": "index.js",
+  "scripts": {
+    "start": "node -r esm main.js",
+    "coverage": "nyc ava",
+    "test": "ava",
+    "bench": "exit",
+    "lint": "standard --fix"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Saiv46/node-protodef-neo.git"
+  },
+  "keywords": [],
+  "author": "Saiv46",
+  "license": "MIT",
+  "engines": {
+    "node": ">=12"
+  },
+  "standard": {
+    "globals": [
+      "BigInt"
+    ]
+  },
+  "ava": {
+    "require": [
+      "esm"
+    ]
+  },
+  "esm": {
+    "cjs": true,
+    "await": true
+  },
+  "bugs": {
+    "url": "https://github.com/Saiv46/node-protodef-neo/issues"
+  },
+  "homepage": "https://github.com/Saiv46/node-protodef-neo#readme",
+  "dependencies": {
+    "protodef-validator": "^1.2.3"
+  },
+  "devDependencies": {
+    "ava": "^3.0.0",
+    "esm": "^3.2.25",
+    "nyc": "^15.0.0",
+    "standard": "^14.3.1"
+  }
+}
