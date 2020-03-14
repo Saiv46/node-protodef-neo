@@ -1,12 +1,34 @@
-import { Transform } from 'stream' // TODO: Use readable-stream instead
-import { constructDatatype } from './datatypes/_shared.mjs'
+import { Transform as _Transform } from 'stream' // TODO: Use readable-stream
+import * as defaultDatatypes from './datatypes'
 
 export class Protocol {
   constructor ({ types, ...namespaces }) {
     this.types = {}
+    this.cache = new Map()
     this.namespace = {}
+    this.rootContext = new Context()
     Object.entries(types).forEach(v => this.addType(...v))
     Object.entries(namespaces).forEach(v => this.addNamespace(...v))
+  }
+
+  _getType (data, context = this.rootContext) {
+    const [type, args] = Array.isArray(data) ? data : [data]
+    if (args) {
+      if (type) {
+        args.type = this._getType(args.type, context.child())
+      }
+      if (countType) {
+        args.countType = this._getType(args.countType, context.child())
+      }
+    }
+    return new type(args, context)
+  }
+
+  addType (name, data = 'native') {
+    if (data === 'native') {
+      data = this.types[name] || defaultDatatypes[name]
+    }
+    this.types[name] = this._getType(data)
   }
 
   addNamespace (name, { types, ...data }) {
@@ -15,7 +37,10 @@ export class Protocol {
 
   get (name) {
     if (typeof name === 'string') {
-      name = name.split('.')
+      if (!this.cache.has(name)) {
+        this.cache.set(name, this.get(name.split('.')))
+      }
+      return this.cache.get(name)
     }
     const [current, ...nested] = name
     if (nested.length) {
@@ -32,7 +57,7 @@ export class Protocol {
     if (!type) {
       throw new Error(`Missing data type ${current}`)
     }
-    return constructDatatype(type)
+    return this._process(type)
   }
 
   read (name, ...args) { return this.get(name).read(...args) }
@@ -43,37 +68,33 @@ export class Protocol {
   createDeserializer (name) { return new Deserializer(this.get(name)) }
 }
 
-class Serializer extends Transform {
-  constructor (inst) {
-    super({ writableObjectMode: true })
+class Transform extends _Transform {
+  constructor (inst, args) {
+    super(args)
     this.instance = inst
   }
 
-  _transform (val, _, cb) {
-    try {
-      const buf = Buffer.allocUnsafe(this.instance.sizeWrite(val))
-      this.instance.write(buf, val)
-      cb(null, buf)
-    } catch (e) {
-      cb(e)
-    }
+  async _transform (val, _, cb) {
+    try { cb(null, await this._asyncTransform(val)) } catch (e) { cb(e) }
+  }
+}
+
+class Serializer extends Transform {
+  constructor (inst) {
+    super(inst, { writableObjectMode: true }, false)
+  }
+
+  _asyncTransform (val) {
+    const buf = Buffer.allocUnsafe(this.instance.sizeWrite(val))
+    this.instance.write(buf, val)
+    return buf
   }
 }
 
 class Deserializer extends Transform {
   constructor (inst) {
-    super({ readableObjectMode: true })
-    this.instance = inst
+    super(inst, { readableObjectMode: true }, true)
   }
 
-  _transform (val, enc, cb) {
-    if (enc !== 'buffer') {
-      val = Buffer.from(val, enc)
-    }
-    try {
-      cb(null, this.instance.read(val))
-    } catch (e) {
-      cb(e)
-    }
-  }
+  _asyncTransform (val) { return this.instance.read(val) }
 }

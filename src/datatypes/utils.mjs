@@ -50,45 +50,49 @@ export class mapper extends Complex {
 }
 
 export class pstring extends Countable {
-  static get type () { return String }
   read (buf) {
     return buf.toString('utf8', this.sizeReadCount(buf), this.sizeRead(buf))
   }
 
   write (buf, val) {
-    this.writeCount(buf, Buffer.byteLength(val))
-    buf.write(val, this.sizeWriteCount(val))
+    const len = Buffer.byteLength(val)
+    this.writeCount(buf, len)
+    buf.write(val, this.sizeWriteCount(len))
   }
 
-  sizeRead (buf) { return this.sizeReadCount(buf) + this.readCount(buf) }
-  sizeWrite (val) { return this.sizeWriteCount(val) + Buffer.byteLength(val) }
+  sizeRead (buf) {
+    return this.sizeReadCount(buf) + this.readCount(buf)
+  }
+  sizeWrite (val) {
+    const len = Buffer.byteLength(val)
+    return this.sizeWriteCount(len) + len
+  }
 }
 
-export class lbitfield {
-  static get type () { return Object }
+export class bitfield {
   constructor (fields) {
     this.fields = fields
+    this.bitview = new BitView(Buffer.allocUnsafe(0))
+    this.bitview.bigEndian = true
     this.bits = Math.ceil(fields.reduce((a, { size }) => a + size, 0) / 8)
   }
 
   read (buf) {
-    const bits = new BitView(buf)
-    bits.bigEndian = this.bigEndian
+    this.bitview._view = new Uint8Array(buf.buffer, buf.byteOffset, buf.byteLength)
     const res = {}
     let b = 0
     for (const { name, size, signed } of this.fields) {
-      res[name] = bits.getBits(b, size, signed)
+      res[name] = this.bitview.getBits(b, size, signed)
       b += size
     }
     return res
   }
 
   write (buf, val) {
-    const bits = new BitView(buf)
-    bits.bigEndian = this.bigEndian
+    this.bitview._view = new Uint8Array(buf.buffer, buf.byteOffset, buf.byteLength)
     let b = 0
     for (const { name, size } of this.fields) {
-      bits.setBits(b, val[name], size)
+      this.bitview.setBits(b, val[name], size)
       b += size
     }
   }
@@ -97,21 +101,9 @@ export class lbitfield {
   sizeWrite (val) { return this.bits }
 }
 
-export class bitfield extends lbitfield {
+export class lbitfield extends bitfield {
   constructor (...args) {
     super(...args)
-    this.bigEndian = true
+    this.bitview.bigEndian = true
   }
-  /* _generateBitmasks(offset, size) {
-    const arr = Array(Math.ceil((offset + size) / 8)).fill(0)
-    let i = offset / 8 | 0
-    offset %= 8
-    while (size) {
-      const bytes = Math.min(size, 8 - offset, 8)
-      arr[i++] = ((1 << bytes) - 1) << (8 - bytes) >> offset
-      size -= bytes
-      if (offset) offset = 0
-    }
-    return arr
-  } */
 }

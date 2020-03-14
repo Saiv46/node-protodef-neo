@@ -1,32 +1,34 @@
 import { Complex, Countable } from './_shared.mjs'
 
 export class array extends Countable {
-  static get type () { return Array }
   constructor ({ type, ...count }, context) {
     super(count, context)
     this.type = this.constructDatatype(type)
   }
 
   read (buf) {
-    const res = []
-    const len = this.readCount(buf)
-    for (let i = 0, b = this.sizeReadCount(buf); i < len; i++) {
-      res.push(this.type.read(buf.slice(b, b += this.type.sizeRead(buf.slice(b)))))
+    const l = this.readCount(buf)
+    const res = new Array(l)
+    for (let i = 0, b = this.sizeReadCount(buf); i < l; i++) {
+      const view = buf.slice(b)
+      res[i] = this.type.read(view)
+      b += this.type.sizeRead(view)
     }
     return res
   }
 
   write (buf, val) {
-    const l = val.length
-    this.writeCount(buf, l)
-    for (let i = 0, b = this.sizeWriteCount(l); i < l; i++) {
-      this.type.write(buf.slice(b, b += this.type.sizeWrite(val[i])), val[i])
+    let b = this.sizeWriteCount(val.length)
+    this.writeCount(buf, val.length)
+    for (const v of val) {
+      this.type.write(buf.slice(b, b += this.type.sizeWrite(v)), v)
     }
   }
 
   sizeRead (buf) {
+    const l = this.readCount(buf)
     let size = this.sizeReadCount(buf)
-    for (let i = 0, l = this.readCount(buf); i < l; i++) {
+    for (let i = 0; i < l; i++) {
       size += this.type.sizeRead(buf.slice(size))
     }
     return size
@@ -48,7 +50,12 @@ export class count extends Complex {
     this.type = this.constructDatatype(type)
   }
 
-  read (buf) { return this.type.read(buf) }
+  read (buf) {
+    const value = this.type.read(buf)
+    this.context.set(this.countFor, value)
+    return value
+  }
+
   write (buf, val) { // TODO: Reimplement
     this.context.set(this.countFor, val)
     this.type.write(buf, val)
@@ -59,7 +66,6 @@ export class count extends Complex {
 }
 
 export class container extends Complex {
-  static get type () { return Object }
   constructor (fields, context) {
     super(context)
     this.fields = fields.map(v => (

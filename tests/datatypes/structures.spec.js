@@ -10,8 +10,9 @@ const obj = { id: 2 ** 31, gender: 255, subgender: 301 }
 
 setup('array ( 4 x u8 )', array, [255, 255, 255, 255], 4, { type: u8, count: 4 })
 setup('array ( 5 x u32 + varint )', array, arr, 21, { type: u32, countType: varint })
-setup('count', count, 42, 1, { type: u8, countFor: 'someField' })
-setup('container ( varint, u8, u32 )', container, obj, 7, [
+setup('count ( 200 )', count, 42, 1, { type: u8, countFor: 'someField' })
+setup('count ( varint )', count, 300, 2, { type: varint, countFor: 'someField' })
+setup('container ( u32, u8, varint )', container, obj, 7, [
   { name: 'id', type: u32 },
   { name: 'gender', type: u8 },
   { name: 'subgender', type: varint }

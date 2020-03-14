@@ -118,18 +118,19 @@ export class lf64 extends f64 {
   write (buf, val) { buf.writeDoubleLE(val) }
 }
 
+const INT = Math.pow(2, 31) - 1
 export class varint extends Numeric {
   read (buf) {
-    const l = this.sizeRead(buf)
     let res = 0
-    for (let i = 0; i < l; i++) {
-      res += (buf[i] & 0x7F) * Math.pow(2, i * 7)
+    let i = 0
+    while (true) {
+      const v = buf[i]
+      res += (v & 0x7F) * Math.pow(2, i++ * 7)
+      if (v < 0x80) return res
     }
-    return res
   }
 
   write (buf, val) {
-    const INT = Math.pow(2, 31) - 1
     let i = 0
     while (val > INT) {
       buf[i++] = (val & 0xFF) | 0x80
@@ -144,7 +145,7 @@ export class varint extends Numeric {
 
   sizeRead (buf) {
     let i = 0
-    while (buf[i++] & 0x80) {}
+    while (buf[i++] >= 0x80) {}
     return i
   }
 
@@ -154,16 +155,17 @@ export class varint extends Numeric {
 }
 export class lvarint extends varint {
   read (buf) {
-    const l = this.sizeRead(buf)
     let res = 0
-    for (let i = 0; i < l; i++) {
-      res += (buf[l - i - 1] & 0x7F) * Math.pow(2, i * 7)
+    let i = 0
+    while (true) {
+      const v = buf[i++]
+      res *= 0x80
+      res += v & 0x7F
+      if (v < 0x80) return res
     }
-    return res
   }
 
   write (buf, val) {
-    const INT = Math.pow(2, 31)
     const l = this.sizeWrite(val)
     let i = 0
     buf[l - ++i] = val & 0xFF
@@ -192,21 +194,21 @@ export class int extends Numeric {
   read (buf) {
     const l = this.size
     let res = 0
-    for (let i = 0; i < l; i++) {
-      res += buf[i] * Math.pow(2, i * 8)
-    }
+    let i = 0
+    while (i < l && i < 4) { res += buf[i] << (i++ * 8) }
+    while (i < l) { res += buf[i] * Math.pow(2, i++ * 8) }
     return res
   }
 
   write (buf, val) {
     const l = this.size
-    for (let i = 0; i < l; i++) {
-      buf[i] = (val / Math.pow(2, i * 8)) & 0xFF
-    }
+    let i = 0
+    while (i < l && i < 4) { buf[i] = (val >>> (i++ * 8)) & 0xFF }
+    while (i < l) { buf[i] = (val / Math.pow(2, i++ * 8)) & 0xFF }
   }
 
-  sizeRead (buf) { return this.size }
-  sizeWrite (val) { return this.size }
+  sizeRead () { return this.size }
+  sizeWrite () { return this.size }
 }
 export class lint extends int {
   read (buf) {

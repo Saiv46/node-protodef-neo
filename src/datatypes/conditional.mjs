@@ -5,8 +5,8 @@ class Switch extends Complex {
   constructor ({ compareTo, compareToValue, fields, default: _default }, context) {
     super(context)
     this.fields = {}
-    for (const [compare, type] of Object.entries(fields)) {
-      this.fields[compare] = this.constructDatatype(type)
+    for (const name in fields) {
+      this.fields[name] = this.constructDatatype(fields[name])
     }
     this.default = this.constructDatatype(_default || Void)
     if (compareTo) {
@@ -17,9 +17,9 @@ class Switch extends Complex {
   }
 
   _findEqual () {
-    const compare = this.compareValue !== undefined
-      ? this.compareValue
-      : this.context.get(this.compare)
+    const compare = this.compare
+      ? this.context.get(this.compare)
+      : this.compareValue
     return this.fields[compare] !== undefined
       ? this.fields[compare]
       : this.default
@@ -53,11 +53,11 @@ export class option extends Complex {
 
   sizeRead (buf) {
     const i = this.bool.sizeRead(buf)
-    return (this.bool.read(buf) ? this.type.sizeRead(buf.slice(i)) : 0) + i
+    return i + (this.bool.read(buf) && this.type.sizeRead(buf.slice(i))) | 0
   }
 
   sizeWrite (val) {
     const present = val !== undefined && val !== null
-    return this.bool.sizeWrite(present) + (present ? this.type.sizeWrite(val) : 0)
+    return this.bool.sizeWrite(present) + (present && this.type.sizeWrite(val)) | 0
   }
 }

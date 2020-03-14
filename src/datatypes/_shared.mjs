@@ -20,20 +20,11 @@ export class Complex {
     this.context = context
   }
 
-  constructDatatype (Type, params = {}) {
-    if (Array.isArray(Type)) {
-      [Type, params] = Type
-    }
-    for (const key in params) {
-      if (!['type', 'countType'].includes(key)) continue
-      params[key] = this.constructDatatype(params[key])
-    }
-    return new Type(params, this.context)
+  constructDatatype (Type) {
+    return Array.isArray(Type)
+      ? new Type[0](Type[1], this.context)
+      : new Type()
   }
-}
-
-export function constructDatatype (...args) {
-  return new Complex().constructDatatype(...args)
 }
 
 export class Countable extends Complex {
