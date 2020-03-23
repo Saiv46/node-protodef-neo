@@ -1,5 +1,6 @@
-import * as datatypes from './datatypes'
+// import * as datatypes from './datatypes'
 import { Protocol } from './shared.mjs'
+// const FUNC_REGEX = /(?:function\s+)?\w+\s?\((.+)\)\s*{\s*([\s\S]+)\s*}/i
 
 /// TO BE IMPLEMENTED
 export default class ProtocolCompiler extends Protocol {

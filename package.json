@@ -1,25 +1,22 @@
 {
-  "name": "node-protodef-neo",
-  "version": "1.0.0",
-  "description": "",
-  "module": "main.js",
-  "main": "index.js",
+  "name": "protodef-neo",
+  "version": "0.1.0",
+  "description": "ProtoDef reimplementation on Node.JS",
+  "module": "./src/index.js",
+  "main": "./index.js",
   "scripts": {
-    "start": "node -r esm main.js",
+    "start": "node -r esm ./src/index",
     "coverage": "nyc ava",
     "test": "ava",
     "bench": "cross-env NODE_ENV=benchmark ava --serial --timeout=1m",
     "lint": "standard --fix"
   },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/Saiv46/node-protodef-neo.git"
-  },
+  "repository": "github:Saiv46/node-protodef-neo",
   "keywords": [],
   "author": "Saiv46",
   "license": "MIT",
   "engines": {
-    "node": ">=10"
+    "node": ">=12"
   },
   "standard": {
     "globals": [
@@ -32,22 +29,21 @@
       "esm"
     ]
   },
-  "esm": {
-    "cjs": true,
-    "await": true
+  "nyc": {
+    "instrument": true,
+    "all": true
   },
   "bugs": "https://github.com/Saiv46/node-protodef-neo/issues",
   "homepage": "https://github.com/Saiv46/node-protodef-neo#readme",
   "dependencies": {
     "bit-buffer": "^0.2.4",
-    "protodef-validator": "^1.2.3"
+    "esm": "^3.2.25"
   },
   "devDependencies": {
     "ava": "^3.5.0",
     "chuhai": "^1.2.0",
     "cross-env": "^7.0.2",
-    "esm": "^3.2.25",
     "nyc": "^15.0.0",
-    "standard": "^14.3.1"
+    "standard": "^14.3.3"
   }
 }

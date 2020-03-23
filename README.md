@@ -1,4 +1,4 @@
-# node-protodef-neo
+# protodef-neo
 
 A reimplementation of [node-protodef](https://github.com/ProtoDef-io/node-protodef)
 
@@ -9,6 +9,4 @@ Goals:
 
 TODO:
 - The countField thing
-- Protocol initializating
-- Proper benchmarking/testing
 - Make a compiler to it more faster (like [Closure Compiler](https://github.com/google/closure-compiler))

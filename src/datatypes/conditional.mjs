@@ -4,31 +4,46 @@ import { Complex } from './_shared.mjs'
 class Switch extends Complex {
   constructor ({ compareTo, compareToValue, fields, default: _default }, context) {
     super(context)
+    /** Arguments:
+      * compareTo : the value is the other field OR
+      * compareToValue : a value is the param itself
+      * fields : an object mapping the values to the types
+      * default : an optional property saying the type taken
+      */
+    if (compareTo) {
+      this.compareTo = compareTo
+    } else {
+      this.compareToValue = compareToValue
+    }
     this.fields = {}
     for (const name in fields) {
       this.fields[name] = this.constructDatatype(fields[name])
     }
     this.default = this.constructDatatype(_default || Void)
-    if (compareTo) {
-      this.compare = compareTo
-    } else {
-      this.compareValue = compareToValue
-    }
   }
 
-  _findEqual () {
-    const compare = this.compare
-      ? this.context.get(this.compare)
-      : this.compareValue
-    return this.fields[compare] !== undefined
-      ? this.fields[compare]
-      : this.default
+  _getType () {
+    const value = this.compareToValue !== undefined
+      ? this.compareToValue
+      : this.context.get(this.compareTo)
+    return this.fields[value] || this.default
   }
 
-  read (buf) { return this._findEqual().read(buf) }
-  write (buf, val) { this._findEqual().write(buf, val) }
-  sizeRead (buf) { return this._findEqual().sizeRead(buf) }
-  sizeWrite (val) { return this._findEqual().sizeWrite(val) }
+  read (buf) {
+    return this._getType().read(buf)
+  }
+
+  write (buf, val) {
+    this._getType().write(buf, val)
+  }
+
+  sizeRead (buf) {
+    return this._getType().sizeRead(buf)
+  }
+
+  sizeWrite (val) {
+    return this._getType().sizeWrite(val)
+  }
 }
 export { Switch as switch }
 

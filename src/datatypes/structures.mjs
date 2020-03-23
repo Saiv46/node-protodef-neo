@@ -1,4 +1,4 @@
-import { Complex, Countable } from './_shared.mjs'
+import { Complex, Countable, PartialReadError } from './_shared.mjs'
 
 export class array extends Countable {
   constructor ({ type, ...count }, context) {
@@ -8,20 +8,21 @@ export class array extends Countable {
 
   read (buf) {
     const l = this.readCount(buf)
-    const res = new Array(l)
+    const res = []
     for (let i = 0, b = this.sizeReadCount(buf); i < l; i++) {
       const view = buf.slice(b)
-      res[i] = this.type.read(view)
+      res.push(this.type.read(view))
       b += this.type.sizeRead(view)
     }
     return res
   }
 
   write (buf, val) {
-    let b = this.sizeWriteCount(val.length)
-    this.writeCount(buf, val.length)
-    for (const v of val) {
-      this.type.write(buf.slice(b, b += this.type.sizeWrite(v)), v)
+    const l = val.length
+    this.writeCount(buf, l)
+    for (let i = 0, b = this.sizeWriteCount(l); i < l; i++) {
+      this.type.write(buf.slice(b), val[i])
+      b += this.type.sizeWrite(val[i])
     }
   }
 
@@ -35,9 +36,10 @@ export class array extends Countable {
   }
 
   sizeWrite (val) {
-    let size = this.sizeWriteCount(val.length)
-    for (const v of val) {
-      size += this.type.sizeWrite(v)
+    const l = val.length
+    let size = this.sizeWriteCount(l)
+    for (let i = 0; i < l; i++) {
+      size += this.type.sizeWrite(val[i])
     }
     return size
   }
@@ -68,16 +70,19 @@ export class count extends Complex {
 export class container extends Complex {
   constructor (fields, context) {
     super(context)
-    this.fields = fields.map(v => (
-      [v.name, this.constructDatatype(v.type)]
-    ))
+    this.fields = new Map()
+    for (const { name, type } of fields) {
+      this.fields.set(name, this.constructDatatype(type))
+    }
   }
 
   read (buf) {
     const res = {}
     let b = 0
     for (const [name, type] of this.fields) {
-      const value = type.read(buf.slice(b, b += type.sizeRead(buf.slice(b))))
+      const view = buf.slice(b)
+      const value = type.read(view)
+      b += type.sizeRead(view)
       this.context.set(name, value)
       res[name] = value
     }
@@ -95,8 +100,10 @@ export class container extends Complex {
 
   sizeRead (buf) {
     let b = 0
-    for (const [, type] of this.fields) {
-      b += type.sizeRead(buf.slice(b))
+    for (const [name, type] of this.fields) {
+      const view = buf.slice(b)
+      b += type.sizeRead(view)
+      this.context.set(name, type.read(view))
     }
     return b
   }

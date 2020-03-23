@@ -1,7 +1,7 @@
 import testType from '../_test.mjs'
 import * as num from '../../src/datatypes/numeric.mjs'
 const test = (k, value, bytes) => {
-  testType({ type: num[k], value, bytes })
+  testType({ name: k, type: num[k], value, bytes })
   if (!k.startsWith('l')) test(`l${k}`, value, bytes)
 }
 const setup = (name, type, value, bytes, params) => testType({
@@ -18,9 +18,9 @@ test('i64', 2n ** 63n - 1n, 8)
 test('u64', 2n ** 64n - 1n, 8)
 test('f32', 1.2 * (10 ** -31), 4)
 test('f64', 2.3 * (10 ** -63), 8)
-setup('varint ( short )', num.varint, 127, 1)
+setup('varint ( short )', num.varint, 300, 2)
 setup('lvarint ( short )', num.lvarint, 300, 2)
-setup('varint ( long )', num.varint, 2 ** 48, 7)
-setup('lvarint ( long )', num.lvarint, 2 ** 50, 8)
+setup('varint ( long )', num.varint, 2 ** 50 - 1, 8)
+setup('lvarint ( long )', num.lvarint, 2 ** 50 - 1, 8)
 setup('int ( 3 bytes )', num.int, 2 ** 24 - 1, 3, { size: 3 })
 setup('lint ( 6 bytes )', num.lint, 2 ** 48 - 1, 6, { size: 6 })

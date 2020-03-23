@@ -10,14 +10,18 @@ export class buffer extends Countable {
   }
 
   static get type () { return Buffer.from }
-  read (buf) { return buf.slice(this.sizeReadCount(buf), this.sizeRead(buf)) }
+  read (buf) {
+    return buf.slice(this.sizeReadCount(buf), this.sizeRead(buf))
+  }
+
   write (buf, val) {
     if (this.rest) {
       val.copy(buf)
       return
     }
-    this.writeCount(buf, val.length)
-    val.copy(buf, this.sizeWriteCount(val))
+    const size = val.length
+    this.writeCount(buf, size)
+    val.copy(buf, this.sizeWriteCount(size), 0, this.fixedSize || size)
   }
 
   sizeRead (buf) {
@@ -25,7 +29,10 @@ export class buffer extends Countable {
     return this.sizeReadCount(buf) + this.readCount(buf)
   }
 
-  sizeWrite (val) { return this.sizeWriteCount(val) + val.length }
+  sizeWrite (val) {
+    const size = val.length
+    return this.sizeWriteCount(size) + size
+  }
 }
 
 export class mapper extends Complex {
@@ -63,6 +70,7 @@ export class pstring extends Countable {
   sizeRead (buf) {
     return this.sizeReadCount(buf) + this.readCount(buf)
   }
+
   sizeWrite (val) {
     const len = Buffer.byteLength(val)
     return this.sizeWriteCount(len) + len

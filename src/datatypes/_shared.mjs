@@ -1,6 +1,8 @@
+const FUNC_REGEX = /(?:function){0,1}\s*\w+\s*\((.*)\)\s*{\s*([\s\S]*)\s*}/
+
 export class Context {
   constructor (parent) {
-    this.fields = []
+    this.fields = {}
     this.parent = parent
   }
 
@@ -16,14 +18,29 @@ export class Context {
 }
 
 export class Complex {
-  constructor (context = new Context()) {
+  constructor (context) {
+    if (!context) {
+      throw new Error('No context passed')
+    }
     this.context = context
   }
 
   constructDatatype (Type) {
-    return Array.isArray(Type)
-      ? new Type[0](Type[1], this.context)
-      : new Type()
+    if (Array.isArray(Type)) return new Type[0](Type[1], this.context)
+    return typeof Type === 'function' ? new Type() : Type
+  }
+
+  templateFunction (inst, method) {
+    const temp = inst[`${method}Template`]
+    if (temp) return temp('_' + (Math.random() * 1e8 | 0).toString(16))
+    let [, args, body] = inst[method].toString().trim().match(FUNC_REGEX)
+    args = args.split(/ *, */)
+    if (body.startsWith('return ')) {
+      if (method !== 'sizeWrite') {
+        body = body.replace(new RegExp(args[0], 'g'), 'buf.slice(i)')
+      }
+    }
+    return body
   }
 }
 
@@ -36,24 +53,36 @@ export class Countable extends Complex {
       this.fixedSize = count
     } else if (typeof count === 'string') {
       this.countField = count
+    } else {
+      throw new Error('No count field passed')
     }
   }
 
   readCount (buf) {
-    if (this.fixedSize) return this.fixedSize
     if (this.countType) return this.countType.read(buf)
-    return this.context.get(this.countField)
+    return this.countField
+      ? this.context.get(this.countField)
+      : this.fixedSize
   }
 
   writeCount (buf, val) {
-    if (this.fixedSize) return
     if (this.countType) {
       this.countType.write(buf, val)
       return
     }
-    this.context.set(this.countField, val)
+    if (this.countField) this.context.set(this.countField, val)
   }
 
   sizeReadCount (buf) { return this.countType ? this.countType.sizeRead(buf) : 0 }
   sizeWriteCount (val) { return this.countType ? this.countType.sizeWrite(val) : 0 }
+}
+
+export class PartialReadError extends Error {
+  constructor (buffer) {
+    super()
+    this.name = this.constructor.name
+    this.buffer = buffer
+    this.partialReadError = true
+    Error.captureStackTrace(this, this.constructor.name)
+  }
 }

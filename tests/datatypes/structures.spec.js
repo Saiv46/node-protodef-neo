@@ -1,7 +1,7 @@
 import testType from '../_test.mjs'
-import { u8, u32, varint } from '../../src/datatypes/numeric.mjs'
-import { pstring } from '../../src/datatypes/utils.mjs'
-import { array, count, container } from '../../src/datatypes/structures.mjs'
+import {
+  array, count, container, u8, u32, varint, pstring
+} from '../../src/datatypes/index.mjs'
 const setup = (name, type, value, bytes, params) => testType({
   name, type, value, bytes, params
 })

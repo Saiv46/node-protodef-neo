@@ -1,4 +1,6 @@
-class Numeric {}
+import { PartialReadError } from './_shared.mjs'
+
+export class Numeric {}
 
 class Byte extends Numeric {
   sizeRead () { return 1 }
@@ -12,8 +14,7 @@ export class u8 extends Byte {
   read (buf) { return buf.readUInt8() }
   write (buf, val) { buf.writeUInt8(val) }
 }
-export class li8 extends i8 {}
-export class lu8 extends u8 {}
+export { i8 as li8, u8 as lu8, i8 as bi8, u8 as bu8 }
 
 class Byte2 extends Numeric {
   sizeRead () { return 2 }
@@ -35,6 +36,7 @@ export class lu16 extends u16 {
   read (buf) { return buf.readUInt16LE() }
   write (buf, val) { buf.writeUInt16LE(val) }
 }
+export { i16 as bi16, u16 as bu16 }
 
 class Word extends Numeric {
   sizeRead () { return 4 }
@@ -65,9 +67,10 @@ export class lf32 extends f32 {
   read (buf) { return buf.readFloatLE() }
   write (buf, val) { buf.writeFloatLE(val) }
 }
+export { i32 as bi32, u32 as bu32, f32 as bf32 }
 
 class Double extends Numeric {
-  sizeRead () { return 8 }
+  sizeRead (buf) { return this.validateSize(buf, 8) }
   sizeWrite () { return 8 }
 }
 class Long extends Double {
@@ -117,17 +120,20 @@ export class lf64 extends f64 {
   read (buf) { return buf.readDoubleLE() }
   write (buf, val) { buf.writeDoubleLE(val) }
 }
+export { i64 as bi64, u64 as bu64, f64 as bf64 }
 
 const INT = Math.pow(2, 31) - 1
+const LOG2 = Math.log2(0x7F)
 export class varint extends Numeric {
   read (buf) {
     let res = 0
     let i = 0
     while (true) {
-      const v = buf[i]
+      const v = buf[i] | 0
       res += (v & 0x7F) * Math.pow(2, i++ * 7)
-      if (v < 0x80) return res
+      if (v < 0x80) break
     }
+    return res
   }
 
   write (buf, val) {
@@ -145,42 +151,18 @@ export class varint extends Numeric {
 
   sizeRead (buf) {
     let i = 0
-    while (buf[i++] >= 0x80) {}
+    while ((buf[i++] | 0) >= 0x80) {}
+    if (i === buf.length && (buf[i - 1] | 0) >= 0x80) {
+      throw new PartialReadError()
+    }
     return i
   }
 
   sizeWrite (val) {
-    return Math.ceil(Math.log2(val) / 7)
+    return Math.ceil(Math.log2(Math.max(Math.abs(val), 127)) / LOG2)
   }
 }
-export class lvarint extends varint {
-  read (buf) {
-    let res = 0
-    let i = 0
-    while (true) {
-      const v = buf[i++]
-      res *= 0x80
-      res += v & 0x7F
-      if (v < 0x80) return res
-    }
-  }
-
-  write (buf, val) {
-    const l = this.sizeWrite(val)
-    let i = 0
-    buf[l - ++i] = val & 0xFF
-    val /= 128
-    while (val >= INT) {
-      buf[l - ++i] = (val & 0xFF) | 0x80
-      val /= 128
-    }
-    while (val >= 0x80) {
-      buf[l - ++i] = (val & 0xFF) | 0x80
-      val >>>= 7
-    }
-    buf[0] = val | 0x80
-  }
-}
+export { varint as lvarint, varint as bvarint }
 
 export class int extends Numeric {
   constructor ({ size, signed }) {
@@ -207,7 +189,13 @@ export class int extends Numeric {
     while (i < l) { buf[i] = (val / Math.pow(2, i++ * 8)) & 0xFF }
   }
 
-  sizeRead () { return this.size }
+  sizeRead (buf) {
+    if (buf.length < this.size) {
+      throw new PartialReadError()
+    }
+    return this.size
+  }
+
   sizeWrite () { return this.size }
 }
 export class lint extends int {
@@ -227,3 +215,4 @@ export class lint extends int {
     }
   }
 }
+export { int as bint }

@@ -1,8 +1,9 @@
 import { Transform as _Transform } from 'stream' // TODO: Use readable-stream
-import * as defaultDatatypes from './datatypes'
+import { Context } from './datatypes/_shared.mjs'
+import * as defaultDatatypes from './datatypes/index.mjs'
 
 export class Protocol {
-  constructor ({ types, ...namespaces }) {
+  constructor ({ types = defaultDatatypes, ...namespaces } = {}) {
     this.types = {}
     this.cache = new Map()
     this.namespace = {}
@@ -11,28 +12,41 @@ export class Protocol {
     Object.entries(namespaces).forEach(v => this.addNamespace(...v))
   }
 
-  _getType (data, context = this.rootContext) {
-    const [type, args] = Array.isArray(data) ? data : [data]
-    if (args) {
-      if (type) {
-        args.type = this._getType(args.type, context.child())
-      }
-      if (countType) {
-        args.countType = this._getType(args.countType, context.child())
-      }
+  _resolveTypeNesting (Type, context = this.rootContext) {
+    const rtn = v => this._resolveTypeNesting(v, context.child())
+    let args
+    if (Array.isArray(Type)) [Type, args] = Type
+    if (typeof Type === 'string') {
+      if (!this.types[Type]) throw new Error(`Datatype "${Type}" not defined`)
+      Type = this.types[Type]
     }
-    return new type(args, context)
+    if (Array.isArray(Type)) { Type = rtn(Type) }
+    function argsRecursive (v) {
+      if (Array.isArray(v)) { return v.map(argsRecursive, this) }
+      if (v.type) { v.type = rtn(v.type) }
+      if (v.fields) { for (const k in v.fields) { v.fields[k] = rtn(v.fields[k]) } }
+      if (v.countType) { v.countType = rtn(v.countType) }
+      if (v.default) { v.default = rtn(v.default) }
+      return v
+    }
+    if (args) { args = argsRecursive.call(this, args) }
+    return typeof Type === 'object' ? Type : new Type(args, context)
   }
 
   addType (name, data = 'native') {
     if (data === 'native') {
       data = this.types[name] || defaultDatatypes[name]
     }
-    this.types[name] = this._getType(data)
+    this.types[name] = data
   }
 
-  addNamespace (name, { types, ...data }) {
-    this.namespace[name] = new this.constructor({ types: { ...this.types, ...types }, ...data })
+  addNamespace (name, data) {
+    if (typeof data === 'object' && !Array.isArray(data)) {
+      data.types = Object.assign(this.types, data.types)
+      this.namespace[name] = new this.constructor(data)
+      return
+    }
+    this.addType(name, data)
   }
 
   get (name) {
@@ -44,19 +58,13 @@ export class Protocol {
     }
     const [current, ...nested] = name
     if (nested.length) {
-      try {
-        return this.namespace[current].get(nested)
-      } catch (e) {
-        if (e instanceof Error) {
-          e.message += `.${nested[0]}`
-        }
-        throw e
-      }
+      return this.namespace[current].get(nested)
     }
-    const type = this.types[current]
+    let type = this.types[current]
     if (!type) {
       throw new Error(`Missing data type ${current}`)
     }
+    type = this._resolveTypeNesting(type)
     return this._process(type)
   }
 
@@ -74,16 +82,13 @@ class Transform extends _Transform {
     this.instance = inst
   }
 
-  async _transform (val, _, cb) {
-    try { cb(null, await this._asyncTransform(val)) } catch (e) { cb(e) }
+  _transform (val, _, cb) {
+    try { cb(null, this._asyncTransform(val)) } catch (e) { cb(e) }
   }
 }
 
 class Serializer extends Transform {
-  constructor (inst) {
-    super(inst, { writableObjectMode: true }, false)
-  }
-
+  constructor (inst) { super(inst, { writableObjectMode: true }) }
   _asyncTransform (val) {
     const buf = Buffer.allocUnsafe(this.instance.sizeWrite(val))
     this.instance.write(buf, val)
@@ -92,9 +97,29 @@ class Serializer extends Transform {
 }
 
 class Deserializer extends Transform {
-  constructor (inst) {
-    super(inst, { readableObjectMode: true }, true)
+  constructor (inst) { super(inst, { readableObjectMode: true }) }
+  _asyncTransform (val) { return this.instance.read(val) }
+}
+
+class Parser extends Transform {
+  constructor (inst, mainType) {
+    if (mainType) { inst = inst.get(mainType) }
+    super(inst, { readableObjectMode: true })
+    this.queue = Buffer.alloc(0)
   }
 
-  _asyncTransform (val) { return this.instance.read(val) }
+  _asyncTransform (val) {
+    this.queue = Buffer.concat([this.queue, val])
+    while (true) {
+      try {
+        this.push(this.inst.read(this.queue))
+        this.queue = this.queue.slice(this.instance.readSize(this.queue))
+      } catch (e) {
+        if (e.partialReadError) return
+        e.buffer = this.queue
+        this.queue = Buffer.alloc(0)
+        throw e
+      }
+    }
+  }
 }
