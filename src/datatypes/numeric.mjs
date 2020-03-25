@@ -1,10 +1,16 @@
 import { PartialReadError } from './_shared.mjs'
 
-export class Numeric {}
+export class Numeric {
+  sizeRead (buf) {
+    if (buf.length < this.size) { throw new PartialReadError() }
+    return this.size
+  }
+
+  sizeWrite () { return this.size }
+}
 
 class Byte extends Numeric {
-  sizeRead () { return 1 }
-  sizeWrite () { return 1 }
+  get size () { return 1 }
 }
 export class i8 extends Byte {
   read (buf) { return buf.readInt8() }
@@ -16,15 +22,14 @@ export class u8 extends Byte {
 }
 export { i8 as li8, u8 as lu8, i8 as bi8, u8 as bu8 }
 
-class Byte2 extends Numeric {
-  sizeRead () { return 2 }
-  sizeWrite () { return 2 }
+class Short extends Numeric {
+  get size () { return 2 }
 }
-export class i16 extends Byte2 {
+export class i16 extends Short {
   read (buf) { return buf.readInt16BE() }
   write (buf, val) { buf.writeInt16BE(val) }
 }
-export class u16 extends Byte2 {
+export class u16 extends Short {
   read (buf) { return buf.readUInt16BE() }
   write (buf, val) { buf.writeUInt16BE(val) }
 }
@@ -39,8 +44,7 @@ export class lu16 extends u16 {
 export { i16 as bi16, u16 as bu16 }
 
 class Word extends Numeric {
-  sizeRead () { return 4 }
-  sizeWrite () { return 4 }
+  get size () { return 4 }
 }
 export class i32 extends Word {
   read (buf) { return buf.readInt32BE() }
@@ -53,7 +57,6 @@ export class u32 extends Word {
 export class f32 extends Word {
   read (buf) { return buf.readFloatBE() }
   write (buf, val) { buf.writeFloatBE(val) }
-  size () { return 4 }
 }
 export class li32 extends i32 {
   read (buf) { return buf.readInt32LE() }
@@ -69,49 +72,46 @@ export class lf32 extends f32 {
 }
 export { i32 as bi32, u32 as bu32, f32 as bf32 }
 
-class Double extends Numeric {
-  sizeRead (buf) { return this.validateSize(buf, 8) }
-  sizeWrite () { return 8 }
+class Long extends Numeric {
+  get size () { return 8 }
 }
-class Long extends Double {
-  static get type () { return BigInt }
-}
+
 export class i64 extends Long {
-  read (buf) { return buf.readBigInt64BE() }
-  readLegacy (buf) { return [buf.readInt32BE(), buf.readInt32BE(4)] }
-  write (buf, val) { buf.writeBigInt64BE(val) }
-  writeLegacy (buf, val) {
+  // read (buf) { return buf.readBigInt64BE() }
+  read (buf) { return [buf.readInt32BE(), buf.readInt32BE(4)] }
+  // write (buf, val) { buf.writeBigInt64BE(BigInt(val)) }
+  write (buf, val) {
     buf.writeInt32BE(val[0])
     buf.writeInt32BE(val[1], 4)
   }
 }
 export class u64 extends Long {
-  read (buf) { return buf.readBigUInt64BE() }
-  readLegacy (buf) { return [buf.readUInt32BE(), buf.readUInt32BE(4)] }
-  write (buf, val) { buf.writeBigUInt64BE(val) }
-  writeLegacy (buf, val) {
+  // read (buf) { return buf.readBigUInt64BE() }
+  read (buf) { return [buf.readUInt32BE(), buf.readUInt32BE(4)] }
+  // write (buf, val) { buf.writeBigUInt64BE(val) }
+  write (buf, val) {
     buf.writeUInt32BE(val[0])
     buf.writeUInt32BE(val[1], 4)
   }
 }
-export class f64 extends Double {
+export class f64 extends Long {
   read (buf) { return buf.readDoubleBE() }
   write (buf, val) { buf.writeDoubleBE(val) }
 }
 export class li64 extends i64 {
-  read (buf) { return buf.readBigInt64LE() }
-  readLegacy (buf) { return [buf.readInt32LE(), buf.readInt32LE(4)] }
-  write (buf, val) { buf.writeBigInt64LE(val) }
-  writeLegacy (buf, val) {
+  // read (buf) { return buf.readBigInt64LE() }
+  read (buf) { return [buf.readInt32LE(), buf.readInt32LE(4)] }
+  // write (buf, val) { buf.writeBigInt64LE(val) }
+  write (buf, val) {
     buf.writeInt32LE(val[0])
     buf.writeInt32LE(val[1], 4)
   }
 }
 export class lu64 extends u64 {
-  read (buf) { return buf.readBigUInt64LE() }
-  readLegacy (buf) { return [buf.readUInt32LE(), buf.readUInt32LE(4)] }
-  write (buf, val) { buf.writeBigUInt64LE(val) }
-  writeLegacy (buf, val) {
+  // read (buf) { return buf.readBigUInt64LE() }
+  read (buf) { return [buf.readUInt32LE(), buf.readUInt32LE(4)] }
+  // write (buf, val) { buf.writeBigUInt64LE(val) }
+  write (buf, val) {
     buf.writeUInt32LE(val[0])
     buf.writeUInt32LE(val[1], 4)
   }
@@ -168,9 +168,7 @@ export class int extends Numeric {
   constructor ({ size, signed }) {
     super()
     this.size = size | 0
-    if (signed) {
-      throw new Error('Not implemented here')
-    }
+    if (signed) { throw new Error('Signed integers not implemented') }
   }
 
   read (buf) {
@@ -188,15 +186,6 @@ export class int extends Numeric {
     while (i < l && i < 4) { buf[i] = (val >>> (i++ * 8)) & 0xFF }
     while (i < l) { buf[i] = (val / Math.pow(2, i++ * 8)) & 0xFF }
   }
-
-  sizeRead (buf) {
-    if (buf.length < this.size) {
-      throw new PartialReadError()
-    }
-    return this.size
-  }
-
-  sizeWrite () { return this.size }
 }
 export class lint extends int {
   read (buf) {

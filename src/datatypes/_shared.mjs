@@ -2,19 +2,18 @@ const FUNC_REGEX = /(?:function){0,1}\s*\w+\s*\((.*)\)\s*{\s*([\s\S]*)\s*}/
 
 export class Context {
   constructor (parent) {
-    this.fields = {}
+    this.fields = new Map()
     this.parent = parent
   }
 
   child () { return new Context(this) }
   get (field) {
-    return this.has(field)
-      ? this.fields[field]
-      : (this.parent && this.parent.get(field))
+    if (this.has(field)) return this.fields.get(field)
+    return this.parent && this.parent.get(field)
   }
 
-  has (field) { return this.fields[field] !== undefined }
-  set (field, value) { this.fields[field] = value }
+  has (field) { return this.fields.has(field) }
+  set (field, value) { this.fields.set(field, value) }
 }
 
 export class Complex {
@@ -25,9 +24,12 @@ export class Complex {
     this.context = context
   }
 
-  constructDatatype (Type) {
-    if (Array.isArray(Type)) return new Type[0](Type[1], this.context)
-    return typeof Type === 'function' ? new Type() : Type
+  constructDatatype (Data) {
+    if (!Array.isArray(Data)) return new Data()
+    const [Type, params] = Data
+    return Array.isArray(Type)
+      ? this.constructDatatype(Type)
+      : new Type(params, this.context.child())
   }
 
   templateFunction (inst, method) {

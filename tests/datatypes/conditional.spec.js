@@ -13,5 +13,5 @@ setup('switch ( i8, [varint] )', Switch, 300, 2, {
     1: varint
   }
 })
-setup('option ( void )', option, undefined, 1, { type: Void })
-setup('option ( u8 )', option, 255, 2, { type: u8 })
+setup('option ( void )', option, undefined, 1, Void)
+setup('option ( u8 )', option, 255, 2, u8)

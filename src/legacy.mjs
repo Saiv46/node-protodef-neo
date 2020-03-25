@@ -1,4 +1,9 @@
 import Interpreter from './interpreter.mjs'
+import {
+  Serializer as _Serializer,
+  Deserializer as _Deserializer
+} from './shared.mjs'
+
 // Trying to make it backward-compatible
 export class ProtoDef extends Interpreter {
   addType (name, data) {
@@ -6,6 +11,28 @@ export class ProtoDef extends Interpreter {
       data = LegacyDatatype.prepare(this, data)
     }
     return super.addType(name, data)
+  }
+
+  addProtocol (data, path) {
+    function get (object, path) {
+      if (!path) return
+      if (typeof path === 'string') { path = path.split('.') }
+      while (path.length) {
+        object = object[path.shift()]
+        if (object === undefined) break
+      }
+      return object
+    }
+    function recursiveAddTypes (protocolData, path) {
+      if (protocolData === undefined) return
+      if (protocolData.types) { this.addTypes(protocolData.types) }
+      recursiveAddTypes.call(this, get(protocolData, path.shift()), path)
+    }
+    recursiveAddTypes.call(this, data, path)
+  }
+
+  addTypes (data) {
+    return Object.entries(data).map(v => this.addType(...v), this)
   }
 
   read (buf, offset, name) {
@@ -38,6 +65,33 @@ export class ProtoDef extends Interpreter {
       buffer: buf.slice(0, size)
     }
   }
+
+  createSerializer (name) { return new Serializer(this.get(name)) }
+  createDeserializer (name) { return new FullPacketParser(this.get(name)) }
+}
+
+export class Serializer extends _Serializer {
+  createPacketBuffer (value) {
+    const buffer = Buffer.allocUnsafe(this.instance.sizeWrite(value))
+    this.instance.write(buffer, value)
+    return buffer
+  }
+
+  _asyncTransform (val) { return this.createPacketBuffer(val) }
+}
+
+export class FullPacketParser extends _Deserializer {
+  parsePacketBuffer (buffer) {
+    const data = this.instance.read(buffer)
+    const size = this.instance.sizeRead(buffer)
+    return {
+      data,
+      metadata: { size },
+      buffer: buffer.slice(0, size)
+    }
+  }
+
+  _asyncTransform (buf) { return this.parsePacketBuffer(buf) }
 }
 
 class InternalLegacyDatatype {

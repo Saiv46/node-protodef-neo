@@ -1,4 +1,4 @@
-import { Complex, Countable } from './_shared.mjs'
+import { Complex, Countable, PartialReadError } from './_shared.mjs'
 import { void as Void } from './primitives.mjs'
 import bitBuffer from 'bit-buffer'
 const { BitView } = bitBuffer
@@ -9,24 +9,22 @@ export class buffer extends Countable {
     this.rest = !!rest
   }
 
-  static get type () { return Buffer.from }
-  read (buf) {
-    return buf.slice(this.sizeReadCount(buf), this.sizeRead(buf))
-  }
-
+  read (buf) { return buf.slice(this.sizeReadCount(buf), this.sizeRead(buf)) }
   write (buf, val) {
     if (this.rest) {
       val.copy(buf)
       return
     }
-    const size = val.length
+    const size = this.fixedSize || val.length
     this.writeCount(buf, size)
-    val.copy(buf, this.sizeWriteCount(size), 0, this.fixedSize || size)
+    val.copy(buf, this.sizeWriteCount(size), 0, size)
   }
 
   sizeRead (buf) {
     if (this.rest) return buf.length
-    return this.sizeReadCount(buf) + this.readCount(buf)
+    const size = this.sizeReadCount(buf) + this.readCount(buf)
+    if (buf.length < size) { throw new PartialReadError() }
+    return size
   }
 
   sizeWrite (val) {
@@ -43,17 +41,17 @@ export class mapper extends Complex {
     this.values = new Map()
     this.sizes = new Map()
     for (let [k, v] of Object.entries(mappings)) {
-      v = `${v}`
+      if (!isNaN(parseInt(k))) { k = parseInt(k) }
       this.keys.set(k, v)
       this.values.set(v, k)
       this.sizes.set(v, this.type.sizeWrite(k))
     }
   }
 
-  read (buf) { return this.keys.get(`${this.type.read(buf)}`) }
-  write (buf, val) { this.type.write(buf, this.values.get(`${val}`)) }
+  read (buf) { return this.keys.get(this.type.read(buf)) }
+  write (buf, val) { this.type.write(buf, this.values.get(val)) }
   sizeRead (buf) { return this.type.sizeRead(buf) }
-  sizeWrite (val) { return this.sizes.get(`${val}`) }
+  sizeWrite (val) { return this.sizes.get(val) }
 }
 
 export class pstring extends Countable {
@@ -67,10 +65,7 @@ export class pstring extends Countable {
     buf.write(val, this.sizeWriteCount(len))
   }
 
-  sizeRead (buf) {
-    return this.sizeReadCount(buf) + this.readCount(buf)
-  }
-
+  sizeRead (buf) { return this.sizeReadCount(buf) + this.readCount(buf) }
   sizeWrite (val) {
     const len = Buffer.byteLength(val)
     return this.sizeWriteCount(len) + len
