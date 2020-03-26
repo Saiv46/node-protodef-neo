@@ -124,7 +124,7 @@ export { i64 as bi64, u64 as bu64, f64 as bf64 }
 
 const INT = Math.pow(2, 31) - 1
 const LOG2 = Math.log2(0x7F)
-export class varint extends Numeric {
+export class varint {
   read (buf) {
     let res = 0
     let i = 0

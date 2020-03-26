@@ -11,8 +11,8 @@ export class array extends Countable {
     const res = []
     for (let i = 0, b = this.sizeReadCount(buf); i < l; i++) {
       const view = buf.slice(b)
-      res.push(this.type.read(view))
       b += this.type.sizeRead(view)
+      res.push(this.type.read(view))
     }
     return res
   }
@@ -85,8 +85,8 @@ export class container extends Complex {
     let b = 0
     for (const [name, type] of this.fields) {
       const view = buf.slice(b)
-      const value = type.read(view)
       b += type.sizeRead(view)
+      const value = type.read(view)
       if (name === ANONYMOUS_FIELD) {
         if (typeof value !== 'object') continue
         for (const k in value) {
@@ -121,8 +121,8 @@ export class container extends Complex {
     let b = 0
     for (const [name, type] of this.fields) {
       const view = buf.slice(b)
-      const value = type.read(view)
       b += type.sizeRead(view)
+      const value = type.read(view)
       if (name === ANONYMOUS_FIELD) {
         for (const k in value) {
           this.context.set(k, value[k])

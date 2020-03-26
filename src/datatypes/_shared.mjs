@@ -1,5 +1,3 @@
-const FUNC_REGEX = /(?:function){0,1}\s*\w+\s*\((.*)\)\s*{\s*([\s\S]*)\s*}/
-
 export class Context {
   constructor (parent) {
     this.fields = new Map()
@@ -27,22 +25,16 @@ export class Complex {
   constructDatatype (Data) {
     if (!Array.isArray(Data)) return new Data()
     const [Type, params] = Data
-    return Array.isArray(Type)
-      ? this.constructDatatype(Type)
-      : new Type(params, this.context.child())
-  }
-
-  templateFunction (inst, method) {
-    const temp = inst[`${method}Template`]
-    if (temp) return temp('_' + (Math.random() * 1e8 | 0).toString(16))
-    let [, args, body] = inst[method].toString().trim().match(FUNC_REGEX)
-    args = args.split(/ *, */)
-    if (body.startsWith('return ')) {
-      if (method !== 'sizeWrite') {
-        body = body.replace(new RegExp(args[0], 'g'), 'buf.slice(i)')
+    const format = (obj, params) => {
+      if (typeof obj === 'string' && obj.startsWith('$')) {
+        obj = params[obj.substr(1)]
       }
+      if (typeof obj !== 'object') return obj
+      for (const k in obj) { obj[k] = format(obj[k], params) }
+      return obj
     }
-    return body
+    if (!Array.isArray(Type)) return new Type(params, this.context.child())
+    return this.constructDatatype(format(Type, params))
   }
 }
 
@@ -80,10 +72,9 @@ export class Countable extends Complex {
 }
 
 export class PartialReadError extends Error {
-  constructor (buffer) {
+  constructor () {
     super()
     this.name = this.constructor.name
-    this.buffer = buffer
     this.partialReadError = true
     Error.captureStackTrace(this, this.constructor.name)
   }

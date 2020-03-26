@@ -1,8 +1,8 @@
-import { Transform as _Transform } from 'stream' // TODO: Use readable-stream
-import { Context } from './datatypes/_shared.mjs'
-import * as defaultDatatypes from './datatypes/index.mjs'
+import { Context } from '../datatypes/_shared.mjs'
+import * as defaultDatatypes from '../datatypes/index.mjs'
+import { Serializer, Deserializer } from './serializer.mjs'
 
-export class Protocol {
+export default class ProtocolInterpreter {
   constructor ({ types = defaultDatatypes, ...namespaces } = {}) {
     this.types = {}
     this.cache = new Map()
@@ -17,16 +17,18 @@ export class Protocol {
     function argsRecursive (v) {
       if (typeof v === 'string') return rtn(v)
       if (Array.isArray(v)) return v.map(argsRecursive)
-      if (v.type) { v.type = rtn(v.type) }
-      if (v.fields) { for (const k in v.fields) { v.fields[k] = rtn(v.fields[k]) } }
-      if (v.countType) { v.countType = rtn(v.countType) }
-      if (v.default) { v.default = rtn(v.default) }
+      if (v.fields) {
+        for (const k in v.fields) { v.fields[k] = rtn(v.fields[k]) }
+      }
+      ['type', 'countType', 'default'].forEach(k => { v[k] = rtn(v[k]) })
       return v
     }
     let args
     if (Array.isArray(Type)) [Type, args] = Type
     if (typeof Type === 'string') {
-      if (!this.types[Type]) throw new Error(`Datatype "${Type}" not defined`)
+      if (!this.types[Type]) {
+        throw new Error(`Datatype "${Type}" not defined`)
+      }
       Type = this.types[Type]
     }
     if (Array.isArray(Type)) { Type = rtn(Type) }
@@ -65,7 +67,8 @@ export class Protocol {
       throw new Error(`Missing data type ${current}`)
     }
     type = this._resolveTypeNesting(type)
-    return this._process(type)
+    const [Constructor, params] = Array.isArray(type) ? type : [type]
+    return new Constructor(params, this.rootContext)
   }
 
   read (name, ...args) { return this.get(name).read(...args) }
@@ -74,52 +77,4 @@ export class Protocol {
   sizeWrite (name, ...args) { return this.get(name).sizeWrite(...args) }
   createSerializer (name) { return new Serializer(this.get(name)) }
   createDeserializer (name) { return new Deserializer(this.get(name)) }
-}
-
-export class Transform extends _Transform {
-  constructor (inst, args) {
-    super(args)
-    this.instance = inst
-  }
-
-  _transform (val, _, cb) {
-    try { cb(null, this._asyncTransform(val)) } catch (e) { cb(e) }
-  }
-}
-
-export class Serializer extends Transform {
-  constructor (inst) { super(inst, { writableObjectMode: true }) }
-  _asyncTransform (val) {
-    const buf = Buffer.allocUnsafe(this.instance.sizeWrite(val))
-    this.instance.write(buf, val)
-    return buf
-  }
-}
-
-export class Deserializer extends Transform {
-  constructor (inst) { super(inst, { readableObjectMode: true }) }
-  _asyncTransform (val) { return this.instance.read(val) }
-}
-
-export class Parser extends Transform {
-  constructor (inst, mainType) {
-    if (mainType) { inst = inst.get(mainType) }
-    super(inst, { readableObjectMode: true })
-    this.queue = Buffer.alloc(0)
-  }
-
-  _asyncTransform (val) {
-    this.queue = Buffer.concat([this.queue, val])
-    while (true) {
-      try {
-        this.push(this.inst.read(this.queue))
-        this.queue = this.queue.slice(this.instance.readSize(this.queue))
-      } catch (e) {
-        if (e.partialReadError) return
-        e.buffer = this.queue
-        this.queue = Buffer.alloc(0)
-        throw e
-      }
-    }
-  }
 }

@@ -1,8 +1,8 @@
-import Interpreter from './interpreter.mjs'
+import Interpreter from './protocol/interpreter.mjs'
 import {
   Serializer as _Serializer,
   Deserializer as _Deserializer
-} from './shared.mjs'
+} from './protocol/serializer.mjs'
 
 // Trying to make it backward-compatible
 export class ProtoDef extends Interpreter {
@@ -77,7 +77,9 @@ export class Serializer extends _Serializer {
     return buffer
   }
 
-  _asyncTransform (val) { return this.createPacketBuffer(val) }
+  _transform (val, _, cb) {
+    try { cb(null, this.createPacketBuffer(val)) } catch (e) { cb(e) }
+  }
 }
 
 export class FullPacketParser extends _Deserializer {
@@ -91,7 +93,9 @@ export class FullPacketParser extends _Deserializer {
     }
   }
 
-  _asyncTransform (buf) { return this.parsePacketBuffer(buf) }
+  _transform (val, _, cb) {
+    try { cb(null, this.parsePacketBuffer(val)) } catch (e) { cb(e) }
+  }
 }
 
 class InternalLegacyDatatype {
@@ -120,10 +124,7 @@ class InternalLegacyDatatype {
 }
 
 class LegacyDatatype {
-  static prepare (...args) {
-    return (class extends LegacyDatatype {}).bind(this, ...args)
-  }
-
+  static prepare (...args) { return LegacyDatatype.bind(this, ...args) }
   constructor (proto, data, args) {
     data = data.map(func => typeof func === 'function' ? func : () => func)
     this.internal = new InternalLegacyDatatype(proto)
