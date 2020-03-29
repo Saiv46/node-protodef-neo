@@ -5,11 +5,13 @@ import {
   Countable,
   PartialReadError
 } from './datatypes/_shared.mjs'
+import * as datatypes from './datatypes/index.mjs'
 
 export default Interpreter
 export {
   Complex as ComplexDatatype,
   Countable as CountableDatatype,
-  PartialReadError
+  PartialReadError,
+  datatypes
 }
 export * from './legacy.mjs'

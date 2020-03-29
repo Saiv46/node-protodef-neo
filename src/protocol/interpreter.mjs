@@ -12,7 +12,7 @@ export default class ProtocolInterpreter {
     Object.entries(namespaces).forEach(v => this.addNamespace(...v))
   }
 
-  _resolveTypeNesting (Type) {
+  _resolveTypeNesting (data) {
     const rtn = v => this._resolveTypeNesting(v)
     function argsRecursive (v) {
       if (typeof v === 'string') return rtn(v)
@@ -23,8 +23,7 @@ export default class ProtocolInterpreter {
       ['type', 'countType', 'default'].forEach(k => { v[k] = rtn(v[k]) })
       return v
     }
-    let args
-    if (Array.isArray(Type)) [Type, args] = Type
+    let [Type, args] = Array.isArray(data) ? data : [data]
     if (typeof Type === 'string') {
       if (!this.types[Type]) {
         throw new Error(`Datatype "${Type}" not defined`)
@@ -32,7 +31,8 @@ export default class ProtocolInterpreter {
       Type = this.types[Type]
     }
     if (Array.isArray(Type)) { Type = rtn(Type) }
-    return args ? [Type, argsRecursive(args)] : Type
+    const result = args ? [Type, argsRecursive(args)] : Type
+    return result
   }
 
   addType (name, data = 'native') {
@@ -40,6 +40,7 @@ export default class ProtocolInterpreter {
       data = this.types[name] || defaultDatatypes[name]
     }
     this.types[name] = data
+    return this
   }
 
   addNamespace (name, data) {
@@ -49,6 +50,7 @@ export default class ProtocolInterpreter {
       return
     }
     this.addType(name, data)
+    return this
   }
 
   get (name) {
@@ -77,4 +79,15 @@ export default class ProtocolInterpreter {
   sizeWrite (name, ...args) { return this.get(name).sizeWrite(...args) }
   createSerializer (name) { return new Serializer(this.get(name)) }
   createDeserializer (name) { return new Deserializer(this.get(name)) }
+  toBuffer (name, ...args) {
+    const inst = this.get(name)
+    const buffer = Buffer.allocUnsafe(inst.sizeWrite(...args))
+    inst.write(buffer, ...args)
+    return buffer
+  }
+
+  fromBuffer (name, ...buf) {
+    if (buf.length > 1) return buf.map(v => this.fromBuffer(name, v))
+    return this.read(name, ...buf)
+  }
 }

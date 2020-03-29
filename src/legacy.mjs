@@ -46,16 +46,8 @@ export class ProtoDef extends Interpreter {
     return offset + super.write(name, buf.slice(offset), val)
   }
 
-  sizeOf (val, name) {
-    return this.sizeWrite(name, val)
-  }
-
-  createPacketBuffer (name, value) {
-    const buffer = Buffer.allocUnsafe(this.sizeWrite(name, value))
-    super.write(name, buffer, value)
-    return buffer
-  }
-
+  sizeOf (val, name) { return this.sizeWrite(name, val) }
+  createPacketBuffer (name, value) { return this.toBuffer(name, value) }
   parsePacketBuffer (name, buf) {
     const data = super.read(name, buf)
     const size = this.sizeRead(name, buf)
