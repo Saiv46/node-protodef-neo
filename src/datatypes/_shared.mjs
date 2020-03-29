@@ -1,17 +1,53 @@
 export class Context {
   constructor (parent) {
     this.fields = new Map()
+    this.childrens = new Set()
     this.parent = parent
   }
 
-  child () { return new Context(this) }
+  child () {
+    const inst = new Context(this)
+    inst.childrens.add(inst)
+    return inst
+  }
+
   get (field) {
-    if (this.has(field)) return this.fields.get(field)
-    return this.parent && this.parent.get(field)
+    field = field.split('/')
+    let root = this
+    /** if (!field[0].startsWith('.')) {
+      while (root.parent) {
+        if (root.has(field[0])) break
+        root = root.parent
+      }
+    } */
+    while (field.length) {
+      const name = field.shift()
+      if (name === '..') {
+        root = root.parent
+        continue
+      }
+      if (root instanceof Context) {
+        if (root.has(name)) {
+          root = root.fields.get(name)
+        } else {
+          for (const child of root.childrens) {
+            if (child.has(name)) {
+              root = child.fields.get(name)
+              break
+            }
+          }
+        }
+        continue
+      }
+      root = root[name]
+    }
+    return root
   }
 
   has (field) { return this.fields.has(field) }
-  set (field, value) { this.fields.set(field, value) }
+  set (field, value) {
+    this.fields.set(field, value)
+  }
 }
 
 export class Complex {
@@ -33,7 +69,7 @@ export class Complex {
       for (const k in obj) { obj[k] = format(obj[k], params) }
       return obj
     }
-    if (!Array.isArray(Type)) return new Type(params, this.context.child())
+    if (!Array.isArray(Type)) return new Type(params, this.context)
     return this.constructDatatype(format(Type, params))
   }
 }

@@ -70,7 +70,7 @@ export class count extends Complex {
 const ANONYMOUS_FIELD = Symbol.for('ANONYMOUS_FIELD')
 export class container extends Complex {
   constructor (fields, context) {
-    super(context)
+    super(context.child())
     this.fields = new Map()
     for (const { name, type, anon = false } of fields) {
       this.fields.set(
