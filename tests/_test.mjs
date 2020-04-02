@@ -19,6 +19,10 @@ export default function ({ type: Type, value, bytes = 0, params = {}, name }) {
   const instance = new Type(params, new Context())
   const buffer = Buffer.alloc(bytes)
   test(name, async t => {
+    if (process.env.NODE_ENV === 'benchmark') {
+      await suite(name, benchType(name, instance, buffer, value, () => t.pass()))
+      return
+    }
     t.log('Expected value:', value, `(${bytes} bytes)`)
     t.deepEqual(instance.sizeWrite(value), bytes)
     t.notThrows(() => instance.write(buffer, value))
@@ -29,9 +33,6 @@ export default function ({ type: Type, value, bytes = 0, params = {}, name }) {
       t.assert(Math.abs(res - value) < Number.EPSILON, `${res} and ${value} are not equal`)
     } else {
       t.deepEqual(res, value)
-    }
-    if (process.env.NODE_ENV === 'benchmark') {
-      await suite(name, benchType(name, instance, buffer, value, () => t.pass()))
     }
   })
 }

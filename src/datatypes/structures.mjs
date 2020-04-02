@@ -78,6 +78,9 @@ export class container extends Complex {
         this.constructDatatype(type)
       )
     }
+    // If none of provided fields uses context - we can skip that
+    this.skipContext = !Array.from(this.fields.values())
+      .some(v => v instanceof Complex)
   }
 
   read (buf) {
@@ -90,13 +93,15 @@ export class container extends Complex {
       if (name === ANONYMOUS_FIELD) {
         if (typeof value !== 'object') continue
         for (const k in value) {
-          this.context.set(k, value[k])
           res[k] = value[k]
+          if (this.skipContext) continue
+          this.context.set(k, value[k])
         }
         continue
       }
-      this.context.set(name, value)
       res[name] = value
+      if (this.skipContext) continue
+      this.context.set(name, value)
     }
     return res
   }
@@ -106,6 +111,7 @@ export class container extends Complex {
     for (const [name, type] of this.fields) {
       if (name === ANONYMOUS_FIELD) {
         type.write(buf.slice(b, b += type.sizeWrite(val)), val)
+        if (this.skipContext) continue
         for (const k in val) {
           this.context.set(k, val[k])
         }
@@ -113,6 +119,7 @@ export class container extends Complex {
       }
       const value = val[name]
       type.write(buf.slice(b, b += type.sizeWrite(value)), value)
+      if (this.skipContext) continue
       this.context.set(name, value)
     }
   }
@@ -122,6 +129,7 @@ export class container extends Complex {
     for (const [name, type] of this.fields) {
       const view = buf.slice(b)
       b += type.sizeRead(view)
+      if (this.skipContext) continue
       const value = type.read(view)
       if (name === ANONYMOUS_FIELD) {
         for (const k in value) {
@@ -129,6 +137,7 @@ export class container extends Complex {
         }
         continue
       }
+      if (this.skipContext) continue
       this.context.set(name, value)
     }
     return b
@@ -139,6 +148,7 @@ export class container extends Complex {
     for (const [name, type] of this.fields) {
       if (name === ANONYMOUS_FIELD) {
         b += type.sizeWrite(val)
+        if (this.skipContext) continue
         for (const k in val) {
           this.context.set(k, val[k])
         }
@@ -146,6 +156,7 @@ export class container extends Complex {
       }
       const value = val[name]
       b += type.sizeWrite(value)
+      if (this.skipContext) continue
       this.context.set(name, value)
     }
     return b

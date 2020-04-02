@@ -2,32 +2,37 @@
   "name": "protodef-neo",
   "version": "0.1.0",
   "description": "ProtoDef reimplementation on Node.JS",
-  "module": "./src/index.js",
-  "main": "./index.js",
+  "module": "./src/index.mjs",
+  "main": "./index.cjs",
+  "exports": {
+    ".": {
+      "import": "./src/index.mjs",
+      "require": "./index.cjs"
+    },
+    "./datatypes": {
+      "import": "./src/datatypes/index.mjs",
+      "require": "./datatypes.cjs"
+    },
+    "./protodef": {
+      "import": "./src/legacy.mjs",
+      "require": "./legacy.cjs"
+    }
+  },
   "scripts": {
-    "start": "node -r esm ./src/index",
-    "coverage": "nyc ava",
     "test": "ava",
     "bench": "cross-env NODE_ENV=benchmark ava --serial --timeout=1m",
     "lint": "standard --fix"
   },
   "repository": "github:Saiv46/node-protodef-neo",
-  "keywords": [],
+  "keywords": ["protodef", "protocol", "serialization", "deserailization"],
   "author": "Saiv46",
   "license": "MIT",
   "engines": {
     "node": ">=12"
   },
-  "standard": {
-    "globals": [
-      "BigInt"
-    ]
-  },
   "ava": {
     "verbose": true,
-    "require": [
-      "esm"
-    ]
+    "require": ["esm"]
   },
   "nyc": {
     "instrument": true,
@@ -43,7 +48,6 @@
     "ava": "^3.5.0",
     "chuhai": "^1.2.0",
     "cross-env": "^7.0.2",
-    "nyc": "^15.0.0",
     "standard": "^14.3.3"
   }
 }

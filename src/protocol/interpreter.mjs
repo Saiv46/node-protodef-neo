@@ -1,18 +1,19 @@
+import ProtocolInterface from './interface.mjs'
 import { Context } from '../datatypes/_shared.mjs'
-import * as defaultDatatypes from '../datatypes/index.mjs'
-import { Serializer, Deserializer } from './serializer.mjs'
+import { void as _void } from '../datatypes/index.mjs'
 
-export default class ProtocolInterpreter {
-  constructor ({ types = defaultDatatypes, ...namespaces } = {}) {
-    this.types = {}
+let NESTING = 0
+const NESTING_LIMIT = 256
+
+export default class ProtocolInterpreter extends ProtocolInterface {
+  constructor (...args) {
+    super(...args)
     this.cache = new Map()
-    this.namespace = {}
     this.rootContext = new Context()
-    Object.entries(types).forEach(v => this.addType(...v))
-    Object.entries(namespaces).forEach(v => this.addNamespace(...v))
   }
 
   _resolveTypeNesting (data) {
+    if (NESTING++ > NESTING_LIMIT) return _void
     const rtn = v => this._resolveTypeNesting(v)
     function argsRecursive (v) {
       if (typeof v === 'string') return rtn(v)
@@ -32,25 +33,8 @@ export default class ProtocolInterpreter {
     }
     if (Array.isArray(Type)) { Type = rtn(Type) }
     const result = args ? [Type, argsRecursive(args)] : Type
+    NESTING--
     return result
-  }
-
-  addType (name, data = 'native') {
-    if (data === 'native') {
-      data = this.types[name] || defaultDatatypes[name]
-    }
-    this.types[name] = data
-    return this
-  }
-
-  addNamespace (name, data) {
-    if (typeof data === 'object' && !Array.isArray(data)) {
-      data.types = Object.assign(this.types, data.types)
-      this.namespace[name] = new this.constructor(data)
-      return
-    }
-    this.addType(name, data)
-    return this
   }
 
   get (name) {
@@ -71,23 +55,5 @@ export default class ProtocolInterpreter {
     type = this._resolveTypeNesting(type)
     const [Constructor, params] = Array.isArray(type) ? type : [type]
     return new Constructor(params, this.rootContext)
-  }
-
-  read (name, ...args) { return this.get(name).read(...args) }
-  write (name, ...args) { return this.get(name).write(...args) }
-  sizeRead (name, ...args) { return this.get(name).sizeRead(...args) }
-  sizeWrite (name, ...args) { return this.get(name).sizeWrite(...args) }
-  createSerializer (name) { return new Serializer(this.get(name)) }
-  createDeserializer (name) { return new Deserializer(this.get(name)) }
-  toBuffer (name, ...args) {
-    const inst = this.get(name)
-    const buffer = Buffer.allocUnsafe(inst.sizeWrite(...args))
-    inst.write(buffer, ...args)
-    return buffer
-  }
-
-  fromBuffer (name, ...buf) {
-    if (buf.length > 1) return buf.map(v => this.fromBuffer(name, v))
-    return this.read(name, ...buf)
   }
 }

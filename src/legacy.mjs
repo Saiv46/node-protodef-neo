@@ -3,6 +3,9 @@ import {
   Serializer as _Serializer,
   Deserializer as _Deserializer
 } from './protocol/serializer.mjs'
+import * as utils from './datatypes/_shared.mjs'
+import * as types from './datatypes/index.mjs'
+export { types, utils }
 
 // Trying to make it backward-compatible
 export class ProtoDef extends Interpreter {
@@ -87,6 +90,29 @@ export class FullPacketParser extends _Deserializer {
 
   _transform (val, _, cb) {
     try { cb(null, this.parsePacketBuffer(val)) } catch (e) { cb(e) }
+  }
+}
+
+export class Parser extends FullPacketParser {
+  constructor (inst) {
+    super(inst)
+    this.queue = Buffer.alloc(0)
+  }
+
+  _transform (val, _, cb) {
+    this.queue = Buffer.concat([this.queue, val])
+    while (true) {
+      try {
+        const packet = this.parsePacketBuffer(this.queue)
+        this.push(packet)
+        this.queue = this.queue.slice(packet.metadata.size)
+      } catch (e) {
+        if (e.partialReadError) return cb()
+        e.buffer = this.queue
+        this.queue = Buffer.alloc(0)
+        cb(e)
+      }
+    }
   }
 }
 
