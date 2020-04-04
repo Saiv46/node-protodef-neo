@@ -1,21 +1,26 @@
 import ProtocolInterface from './interface.mjs'
 import { Context } from '../datatypes/_shared.mjs'
-import { void as _void } from '../datatypes/index.mjs'
-
-let NESTING = 0
-const NESTING_LIMIT = 256
+// import { void as _void } from '../datatypes/index.mjs'
 
 export default class ProtocolInterpreter extends ProtocolInterface {
   constructor (...args) {
     super(...args)
     this.cache = new Map()
-    this.rootContext = new Context()
   }
 
-  _resolveTypeNesting (data) {
-    if (NESTING++ > NESTING_LIMIT) return _void
+  _resolveTypeNesting (data, parent) {
+    const [type, args] = Array.isArray(data) ? data : [data]
+    if (this.cache.has(type)) return this.cache.get(type)
+    let Constructor = this.types[type]
+    if (!Constructor) {
+      throw new Error(`Datatype "${type}" not defined`)
+    }
+    if (Array.isArray(Constructor)) {
+      Constructor = this._resolveTypeNesting(Constructor, type)
+    }
+    // TODO
     const rtn = v => this._resolveTypeNesting(v)
-    function argsRecursive (v) {
+    function argsRecursive (t, v) {
       if (typeof v === 'string') return rtn(v)
       if (Array.isArray(v)) return v.map(argsRecursive)
       if (v.fields) {
@@ -24,16 +29,7 @@ export default class ProtocolInterpreter extends ProtocolInterface {
       ['type', 'countType', 'default'].forEach(k => { v[k] = rtn(v[k]) })
       return v
     }
-    let [Type, args] = Array.isArray(data) ? data : [data]
-    if (typeof Type === 'string') {
-      if (!this.types[Type]) {
-        throw new Error(`Datatype "${Type}" not defined`)
-      }
-      Type = this.types[Type]
-    }
-    if (Array.isArray(Type)) { Type = rtn(Type) }
     const result = args ? [Type, argsRecursive(args)] : Type
-    NESTING--
     return result
   }
 
@@ -48,12 +44,10 @@ export default class ProtocolInterpreter extends ProtocolInterface {
     if (nested.length) {
       return this.namespace[current].get(nested)
     }
-    let type = this.types[current]
+    const type = this.types[current]
     if (!type) {
       throw new Error(`Missing data type ${current}`)
     }
-    type = this._resolveTypeNesting(type)
-    const [Constructor, params] = Array.isArray(type) ? type : [type]
-    return new Constructor(params, this.rootContext)
+    return this._resolveTypeNesting(type)
   }
 }

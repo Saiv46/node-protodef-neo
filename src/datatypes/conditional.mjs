@@ -2,8 +2,8 @@ import { bool, void as Void } from './primitives.mjs'
 import { Complex } from './_shared.mjs'
 
 class Switch extends Complex {
-  constructor ({ compareTo, compareToValue, fields, default: def = Void }, context) {
-    super(context)
+  constructor ({ compareTo, compareToValue, fields, default: def = Void }) {
+    super()
     /** Arguments:
       * compareTo : the value is the other field OR
       * compareToValue : a value is the param itself
@@ -29,10 +29,10 @@ class Switch extends Complex {
     return this.fields[value] || this.default
   }
 
-  read (buf) { return this._getType().read(buf) }
-  write (buf, val) { this._getType().write(buf, val) }
-  sizeRead (buf) { return this._getType().sizeRead(buf) }
-  sizeWrite (val) { return this._getType().sizeWrite(val) }
+  read (buf, ctx) { return this._getType().read(buf, ctx) }
+  write (buf, val, ctx) { this._getType().write(buf, val, ctx) }
+  sizeRead (buf, ctx) { return this._getType().sizeRead(buf, ctx) }
+  sizeWrite (val, ctx) { return this._getType().sizeWrite(val, ctx) }
 }
 export { Switch as switch }
 

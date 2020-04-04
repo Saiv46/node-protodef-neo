@@ -51,14 +51,8 @@ export class Context {
 }
 
 export class Complex {
-  constructor (context) {
-    if (!context) {
-      throw new Error('No context passed')
-    }
-    this.context = context
-  }
-
   constructDatatype (Data) {
+    return Data
     if (!Array.isArray(Data)) return new Data()
     const [Type, params] = Data
     const format = (obj, params) => {
@@ -75,8 +69,8 @@ export class Complex {
 }
 
 export class Countable extends Complex {
-  constructor ({ countType, count }, context) {
-    super(context)
+  constructor ({ countType, count }) {
+    super()
     if (countType) {
       this.countType = this.constructDatatype(countType)
     } else if (typeof count === 'number') {
@@ -88,23 +82,28 @@ export class Countable extends Complex {
     }
   }
 
-  readCount (buf) {
+  readCount (buf, ctx) {
     if (this.countType) return this.countType.read(buf)
     return this.countField
-      ? this.context.get(this.countField)
+      ? ctx.get(this.countField)
       : this.fixedSize
   }
 
-  writeCount (buf, val) {
+  writeCount (buf, val, ctx) {
     if (this.countType) {
-      this.countType.write(buf, val)
+      this.countType.write(buf, val, ctx)
       return
     }
-    if (this.countField) this.context.set(this.countField, val)
+    if (this.countField) ctx.set(this.countField, val)
   }
 
-  sizeReadCount (buf) { return this.countType ? this.countType.sizeRead(buf) : 0 }
-  sizeWriteCount (val) { return this.countType ? this.countType.sizeWrite(val) : 0 }
+  sizeReadCount (buf, ctx) {
+    return this.countType ? this.countType.sizeRead(buf, ctx) : 0
+  }
+
+  sizeWriteCount (val, ctx) {
+    return this.countType ? this.countType.sizeWrite(val, ctx) : 0
+  }
 }
 
 export class PartialReadError extends Error {

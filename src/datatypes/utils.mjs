@@ -4,8 +4,8 @@ import bitBuffer from 'bit-buffer'
 const { BitView } = bitBuffer
 
 export class buffer extends Countable {
-  constructor ({ rest, ...count }, context) {
-    super(rest ? { countType: Void } : count, context)
+  constructor ({ rest, ...count }) {
+    super(rest ? { countType: Void } : count)
     this.rest = !!rest
   }
 
@@ -34,24 +34,22 @@ export class buffer extends Countable {
 }
 
 export class mapper extends Complex {
-  constructor ({ type, mappings }, context) {
-    super(context)
+  constructor ({ type, mappings }) {
+    super()
     this.type = this.constructDatatype(type)
     this.keys = new Map()
     this.values = new Map()
-    this.sizes = new Map()
     for (let [k, v] of Object.entries(mappings)) {
       if (!isNaN(parseInt(k))) { k = parseInt(k) }
       this.keys.set(k, v)
       this.values.set(v, k)
-      this.sizes.set(v, this.type.sizeWrite(k))
     }
   }
 
-  read (buf) { return this.keys.get(this.type.read(buf)) }
-  write (buf, val) { this.type.write(buf, this.values.get(val)) }
-  sizeRead (buf) { return this.type.sizeRead(buf) }
-  sizeWrite (val) { return this.sizes.get(val) }
+  read (buf, ctx) { return this.keys.get(this.type.read(buf, ctx)) }
+  write (buf, val, ctx) { this.type.write(buf, this.values.get(val), ctx) }
+  sizeRead (buf, ctx) { return this.type.sizeRead(buf, ctx) }
+  sizeWrite (val) { return this.type.sizeWrite(this.values.get(val), ctx) }
 }
 
 export class pstring extends Countable {
@@ -80,28 +78,31 @@ export class bitfield {
     this.bits = Math.ceil(fields.reduce((a, { size }) => a + size, 0) / 8)
   }
 
-  read (buf) {
+  read (buf, ctx) {
     this.bitview._view = new Uint8Array(buf.buffer, buf.byteOffset, buf.byteLength)
     const res = {}
     let b = 0
     for (const { name, size, signed } of this.fields) {
-      res[name] = this.bitview.getBits(b, size, signed)
+      const value = this.bitview.getBits(b, size, signed)
+      res[name] = value
+      ctx.set(name, value)
       b += size
     }
     return res
   }
 
-  write (buf, val) {
+  write (buf, val, ctx) {
     this.bitview._view = new Uint8Array(buf.buffer, buf.byteOffset, buf.byteLength)
     let b = 0
     for (const { name, size } of this.fields) {
       this.bitview.setBits(b, val[name], size)
+      ctx.set(name, val[name])
       b += size
     }
   }
 
-  sizeRead (buf) { return this.bits }
-  sizeWrite (val) { return this.bits }
+  sizeRead (buf, ctx) { return this.bits }
+  sizeWrite (val, ctx) { return this.bits }
 }
 
 export class lbitfield extends bitfield {
