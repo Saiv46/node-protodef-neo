@@ -4,29 +4,23 @@ import { Complex } from './_shared.mjs'
 class Switch extends Complex {
   constructor ({ compareTo, compareToValue, fields, default: def = Void }, context) {
     super(context)
-    /** Arguments:
-      * compareTo : the value is the other field OR
-      * compareToValue : a value is the param itself
-      * fields : an object mapping the values to the types
-      * default : an optional property saying the type taken
-      */
-    if (compareTo) {
-      this.compareTo = compareTo
-    } else {
-      this.compareToValue = compareToValue
-    }
+    this.compareMode = compareTo !== undefined && compareToValue === undefined
+    this.compareTo = compareTo
+    this.compareToValue = compareToValue
+
     this.fields = {}
     for (const name in fields) {
-      this.fields[name] = this.constructDatatype(fields[name])
+      this.fields[name.toString()] = this.constructDatatype(fields[name])
     }
     this.default = this.constructDatatype(def)
   }
 
   _getType () {
-    const value = this.compareToValue !== undefined
-      ? this.compareToValue
-      : this.context.get(this.compareTo)
-    return this.fields[value] || this.default
+    const value = this.compareMode
+      ? this.context.get(this.compareTo)
+      : this.compareToValue
+    const field = this.fields[value.toString()]
+    return field !== undefined ? field : this.default
   }
 
   read (buf) { return this._getType().read(buf) }
