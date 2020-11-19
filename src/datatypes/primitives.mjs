@@ -23,12 +23,10 @@ export class cstring {
   read (buf) { return buf.toString(undefined, 0, this.sizeRead(buf) - 1) }
   write (buf, val) { buf[buf.write(val)] = 0 }
   sizeRead (buf) {
-    let i = 0
-    while (buf[i++]) {}
-    if (i === buf.length && buf[i - 1]) {
-      throw new PartialReadError()
+    for (let i = 0; i < buf.length; i++) {
+      if (buf[i] === 0) return i + 1
     }
-    return i
+    throw new PartialReadError()
   }
 
   sizeWrite (val) { return Buffer.byteLength(val) + 1 }
