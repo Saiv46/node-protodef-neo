@@ -3,19 +3,19 @@
   "version": "0.1.0",
   "description": "ProtoDef reimplementation on Node.JS",
   "module": "./src/index.mjs",
-  "main": "./index.cjs",
+  "main": "./src/index.cjs",
   "exports": {
     ".": {
       "import": "./src/index.mjs",
-      "require": "./index.cjs"
+      "require": "./src/index.cjs"
     },
     "./datatypes": {
       "import": "./src/datatypes/index.mjs",
-      "require": "./datatypes.cjs"
+      "require": "./src/datatypes.cjs"
     },
     "./protodef": {
       "import": "./src/legacy.mjs",
-      "require": "./legacy.cjs"
+      "require": "./src/legacy.cjs"
     }
   },
   "scripts": {
@@ -24,7 +24,12 @@
     "lint": "standard --fix"
   },
   "repository": "github:Saiv46/node-protodef-neo",
-  "keywords": ["protodef", "protocol", "serialization", "deserailization"],
+  "keywords": [
+    "protodef",
+    "protocol",
+    "serialization",
+    "deserailization"
+  ],
   "author": "Saiv46",
   "license": "MIT",
   "engines": {
@@ -32,7 +37,9 @@
   },
   "ava": {
     "verbose": true,
-    "require": ["esm"]
+    "require": [
+      "esm"
+    ]
   },
   "nyc": {
     "instrument": true,
