@@ -27,10 +27,7 @@ export class buffer extends Countable {
     return size
   }
 
-  sizeWrite (val) {
-    const size = val.length
-    return this.sizeWriteCount(size) + size
-  }
+  sizeWrite (val) { return this.sizeWriteCount(val.length) + val.length }
 }
 
 export class mapper extends Complex {
