@@ -1,3 +1,5 @@
+const NESTING_LAZYNESS = process.env.PROTODEF_LAZYMODE ? 8 : 64
+
 export class Context {
   constructor (parent) {
     this.fields = new Map()
@@ -50,6 +52,7 @@ export class Context {
   }
 }
 
+let NESTING = 0
 export class Complex {
   constructor (context) {
     if (!context) {
@@ -60,6 +63,10 @@ export class Complex {
 
   constructDatatype (Data) {
     if (!Array.isArray(Data)) return new Data()
+    if (NESTING > NESTING_LAZYNESS) {
+      return new LazyDatatype(Data, this.context)
+    }
+    NESTING++
     const [Type, params] = Data
     const format = (obj, params) => {
       if (typeof obj === 'string' && obj.startsWith('$')) {
@@ -69,8 +76,12 @@ export class Complex {
       for (const k in obj) { obj[k] = format(obj[k], params) }
       return obj
     }
-    if (!Array.isArray(Type)) return new Type(params, this.context)
-    return this.constructDatatype(format(Type, params))
+    const res = Array.isArray(Type)
+      ? this.constructDatatype(format(Type, params))
+      : new Type(params, this.context)
+
+    NESTING--
+    return res
   }
 }
 
@@ -114,4 +125,44 @@ export class PartialReadError extends Error {
     this.partialReadError = true
     Error.captureStackTrace(this, this.constructor.name)
   }
+}
+
+export class LazyDatatype {
+  constructor (args, context) {
+    this.constructArguments = args
+    this.constructContext = context
+    this.datatype = null
+  }
+
+  get () {
+    this.hotness++
+    if (this.datatype !== null) return this.datatype
+    const [Type, params] = Array.isArray(this.constructArguments)
+      ? this.constructArguments
+      : [this.constructArguments]
+    if (params !== undefined) {
+      for (const k in params) {
+        const v = params[k]
+        if (Array.isArray(v) || params[k] === 'function') {
+          params[k] = new LazyDatatype(v, this.constructContext)
+        }
+        this.datatype = new Type(params, this.constructContext)
+      }
+    } else {
+      this.datatype = new Type()
+    }
+    // We don't need this anymore
+    this.constructDatatype = null
+    this.constructContext = null
+    return this.datatype
+  }
+
+  read (buf) { return this.get().read(buf) }
+  write (buf, val) { return this.get().write(buf, val) }
+  sizeRead (buf) { return this.get().sizeRead(buf) }
+  sizeWrite (val) { return this.get().sizeWrite(val) }
+  readCount (buf) { return this.get().readCount(buf) }
+  writeCount (buf, val) { return this.get().writeCount(buf, val) }
+  sizeReadCount (buf) { return this.get().sizeReadCount(buf) }
+  sizeWriteCount (val) { return this.get().sizeWriteCount(val) }
 }
