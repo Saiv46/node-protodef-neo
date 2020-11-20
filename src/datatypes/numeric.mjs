@@ -140,7 +140,7 @@ export class varint {
   read (buf) {
     let res = 0
     for (let i = 0; i < buf.length; i++) {
-      res += (buf[i] & 0x7F) * Math.pow(2, i++ * 7)
+      res += (buf[i] & 0x7F) * Math.pow(2, i * 7)
     }
     return res
   }
@@ -159,8 +159,8 @@ export class varint {
   }
 
   sizeRead (buf) {
-    for (let i = 0; i < buf.length; i++) {
-      if ((buf[i] | 0x80) === 0) return i
+    for (let i = 0; i < buf.length;) {
+      if (buf[i++] < 0x80) return i
     }
     throw new PartialReadError()
   }
