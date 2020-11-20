@@ -1,4 +1,12 @@
-const NESTING_LAZYNESS = process.env.PROTODEF_LAZYMODE ? 8 : 64
+// PROTODEF_LAZYNESS environment variable
+// - Increase to speedup recursive datatypes
+// - Decrease to save memory
+// - If value <= 1 - everything will be "lazy"
+// - 0 = Slow mode
+// - -1 = Never destruct (see below)
+// After some time datatypes got destructed
+// back to "lazy" state if they not "hot" enough
+const { NESTING_LAZYNESS = 0 } = process.env
 
 export class Context {
   constructor (parent) {
@@ -9,50 +17,48 @@ export class Context {
 
   child () {
     const inst = new Context(this)
-    inst.childrens.add(inst)
+    this.childrens.add(inst)
     return inst
   }
 
-  get (field) {
-    field = field.split('/')
+  get (name) {
+    const fields = name.split(/[./]/)
     let root = this
-    /** if (!field[0].startsWith('.')) {
+
+    const first = fields.shift()
+    if (first) {
       while (root.parent) {
-        if (root.has(field[0])) break
+        if (root.has(first)) {
+          root = root.fields.get(first)
+          break
+        }
         root = root.parent
       }
-    } */
-    while (field.length) {
-      const name = field.shift()
-      if (name === '..') {
-        root = root.parent
-        continue
-      }
+    }
+
+    while (fields.length) {
+      const field = fields.shift()
       if (root instanceof Context) {
-        if (root.has(name)) {
-          root = root.fields.get(name)
+        if (root.has(field)) {
+          root = root.fields.get(field)
         } else {
           for (const child of root.childrens) {
-            if (child.has(name)) {
-              root = child.fields.get(name)
+            if (child.has(field)) {
+              root = child.fields.get(field)
               break
             }
           }
         }
-        continue
-      }
-      root = root[name]
+      } else { root = root[field] }
     }
     return root
   }
 
   has (field) { return this.fields.has(field) }
-  set (field, value) {
-    this.fields.set(field, value)
-  }
+  set (name, value) { this.fields.set(name, value); return this }
 }
 
-let NESTING = 0
+let NESTING = NESTING_LAZYNESS < 1 ? 1 : 0
 export class Complex {
   constructor (context) {
     if (!context) {
@@ -127,33 +133,42 @@ export class PartialReadError extends Error {
   }
 }
 
-export class LazyDatatype {
+export class LazyDatatype extends Complex {
   constructor (args, context) {
-    this.constructArguments = args
-    this.constructContext = context
+    super(context)
+    this.arguments = args
     this.datatype = null
+    this.timer = 0
+    this.hotness = 0
   }
 
   get () {
+    this.hotness++
     if (this.datatype !== null) return this.datatype
-    const [Type, params] = Array.isArray(this.constructArguments)
-      ? this.constructArguments
-      : [this.constructArguments]
+    this.hotness += NESTING_LAZYNESS
+    const [Type, params] = Array.isArray(this.arguments)
+      ? this.arguments : [this.arguments]
     if (params !== undefined) {
-      for (const k in params) {
-        const v = params[k]
-        if (Array.isArray(v) || params[k] === 'function') {
-          params[k] = new LazyDatatype(v, this.constructContext)
-        }
-        this.datatype = new Type(params, this.constructContext)
-      }
+      this.datatype = new Type(params, this.context)
     } else {
       this.datatype = new Type()
     }
-    // We don't need this anymore
-    this.constructDatatype = null
-    this.constructContext = null
+    if (NESTING_LAZYNESS < 0) {
+      this.arguments = null
+      this.context = null
+    } else {
+      this.timer = setInterval(this.cleanup.bind(this), 0)
+    }
     return this.datatype
+  }
+
+  cleanup () {
+    if (this.hotness < NESTING_LAZYNESS) {
+      this.datatype = null
+      clearInterval(this.timer)
+      this.timer = 0
+    }
+    this.hotness--
   }
 
   read (buf) { return this.get().read(buf) }

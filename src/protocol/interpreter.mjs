@@ -1,40 +1,54 @@
 import ProtocolInterface from './interface.mjs'
 import { Context } from '../datatypes/_shared.mjs'
-import { void as _void } from '../datatypes/index.mjs'
-
-let NESTING = 0
-const NESTING_LIMIT = 256
 
 export default class ProtocolInterpreter extends ProtocolInterface {
   constructor (...args) {
     super(...args)
     this.cache = new Map()
+    this.stack = new Map()
     this.rootContext = new Context()
   }
 
-  _resolveTypeNesting (data) {
-    if (NESTING++ > NESTING_LIMIT) return _void
-    const rtn = v => this._resolveTypeNesting(v)
-    function argsRecursive (v) {
-      if (typeof v === 'string') return rtn(v)
-      if (Array.isArray(v)) return v.map(argsRecursive)
-      if (v.fields) {
-        for (const k in v.fields) { v.fields[k] = rtn(v.fields[k]) }
+  _RTNloop (args) {
+    if (typeof args === 'string') { return this.resolveTypeNesting(args) }
+    if (Array.isArray(args)) { return args.map(this._RTNloop, this) }
+    for (const k in args) {
+      const v = args[k]
+      switch (k) {
+        case 'fields': {
+          for (const k2 in v) {
+            args.fields[k2] = this.resolveTypeNesting(v[k2])
+          }
+          break
+        }
+        case 'type':
+        case 'countType':
+        case 'default': {
+          args[k] = this.resolveTypeNesting(v)
+          break
+        }
       }
-      ['type', 'countType', 'default'].forEach(k => { v[k] = rtn(v[k]) })
-      return v
     }
+    return args
+  }
+
+  resolveTypeNesting (data) {
+    if (this.stack.has(data)) return this.stack.get(data)
     let [Type, args] = Array.isArray(data) ? data : [data]
+
     if (typeof Type === 'string') {
       if (!this.types[Type]) {
         throw new Error(`Datatype "${Type}" not defined`)
       }
-      Type = this.types[Type]
+      const _type = this.types[Type]
+      if (typeof _type !== 'function') {
+        this.stack.set(Type, _type)
+      }
+      Type = _type
     }
-    if (Array.isArray(Type)) { Type = rtn(Type) }
-    const result = args ? [Type, argsRecursive(args)] : Type
-    NESTING--
-    return result
+
+    if (Array.isArray(Type)) { Type = this.resolveTypeNesting(Type) }
+    return args ? [Type, this._RTNloop(args)] : Type
   }
 
   get (name) {
@@ -52,7 +66,8 @@ export default class ProtocolInterpreter extends ProtocolInterface {
     if (!type) {
       throw new Error(`Missing data type ${current}`)
     }
-    type = this._resolveTypeNesting(type)
+    type = this.resolveTypeNesting(type)
+    this.stack.clear()
     const [Constructor, params] = Array.isArray(type) ? type : [type]
     return new Constructor(params, this.rootContext)
   }

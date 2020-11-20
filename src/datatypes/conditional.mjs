@@ -10,7 +10,7 @@ class Switch extends Complex {
 
     this.fields = {}
     for (const name in fields) {
-      this.fields[name.toString()] = this.constructDatatype(fields[name])
+      this.fields[name] = this.constructDatatype(fields[name])
     }
     this.default = this.constructDatatype(def)
   }
@@ -19,7 +19,7 @@ class Switch extends Complex {
     const value = this.compareMode
       ? this.context.get(this.compareTo)
       : this.compareToValue
-    const field = this.fields[value.toString()]
+    const field = this.fields[value]
     return field !== undefined ? field : this.default
   }
 
