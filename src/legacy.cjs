@@ -1,1 +1,1 @@
-module.exports = require('esm')(module)('./src/legacy.mjs')
+module.exports = require('esm')(module)('./legacy.mjs')

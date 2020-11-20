@@ -1,1 +1,1 @@
-module.exports = require('esm')(module)('./src/datatypes/index.mjs')
+module.exports = require('esm')(module)('./datatypes/index.mjs')
