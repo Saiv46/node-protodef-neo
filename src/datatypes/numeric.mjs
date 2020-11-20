@@ -79,19 +79,25 @@ class Long extends Numeric {
 export class i64 extends Long {
   // read (buf) { return buf.readBigInt64BE() }
   read (buf) { return [buf.readInt32BE(), buf.readInt32BE(4)] }
-  // write (buf, val) { buf.writeBigInt64BE(BigInt(val)) }
   write (buf, val) {
-    buf.writeInt32BE(val[0])
-    buf.writeInt32BE(val[1], 4)
+    if (Array.isArray(val)) {
+      buf.writeInt32BE(val[0])
+      buf.writeInt32BE(val[1], 4)
+    } else {
+      buf.writeBigInt64BE(val)
+    }
   }
 }
 export class u64 extends Long {
   // read (buf) { return buf.readBigUInt64BE() }
   read (buf) { return [buf.readUInt32BE(), buf.readUInt32BE(4)] }
-  // write (buf, val) { buf.writeBigUInt64BE(val) }
   write (buf, val) {
-    buf.writeUInt32BE(val[0])
-    buf.writeUInt32BE(val[1], 4)
+    if (Array.isArray(val)) {
+      buf.writeUInt32BE(val[0])
+      buf.writeUInt32BE(val[1], 4)
+    } else {
+      buf.writeBigUInt64BE(val)
+    }
   }
 }
 export class f64 extends Long {
@@ -101,19 +107,25 @@ export class f64 extends Long {
 export class li64 extends i64 {
   // read (buf) { return buf.readBigInt64LE() }
   read (buf) { return [buf.readInt32LE(), buf.readInt32LE(4)] }
-  // write (buf, val) { buf.writeBigInt64LE(val) }
   write (buf, val) {
-    buf.writeInt32LE(val[0])
-    buf.writeInt32LE(val[1], 4)
+    if (Array.isArray(val)) {
+      buf.writeInt32LE(val[0])
+      buf.writeInt32LE(val[1], 4)
+    } else {
+      buf.writeBigInt64LE(val)
+    }
   }
 }
 export class lu64 extends u64 {
   // read (buf) { return buf.readBigUInt64LE() }
   read (buf) { return [buf.readUInt32LE(), buf.readUInt32LE(4)] }
-  // write (buf, val) { buf.writeBigUInt64LE(val) }
   write (buf, val) {
-    buf.writeUInt32LE(val[0])
-    buf.writeUInt32LE(val[1], 4)
+    if (Array.isArray(val)) {
+      buf.writeUInt32LE(val[0])
+      buf.writeUInt32LE(val[1], 4)
+    } else {
+      buf.writeBigUInt64LE(val)
+    }
   }
 }
 export class lf64 extends f64 {
@@ -127,11 +139,8 @@ const LOG2 = Math.log2(0x7F)
 export class varint {
   read (buf) {
     let res = 0
-    let i = 0
-    while (true) {
-      const v = buf[i] | 0
-      res += (v & 0x7F) * Math.pow(2, i++ * 7)
-      if (v < 0x80) break
+    for (let i = 0; i < buf.length; i++) {
+      res += (buf[i] & 0x7F) * Math.pow(2, i++ * 7)
     }
     return res
   }
@@ -150,12 +159,10 @@ export class varint {
   }
 
   sizeRead (buf) {
-    let i = 0
-    while ((buf[i++] | 0) >= 0x80) {}
-    if (i === buf.length && (buf[i - 1] | 0) >= 0x80) {
-      throw new PartialReadError()
+    for (let i = 0; i < buf.length; i++) {
+      if ((buf[i] | 0x80) === 0) return i
     }
-    return i
+    throw new PartialReadError()
   }
 
   sizeWrite (val) {
@@ -168,7 +175,7 @@ export class int extends Numeric {
   constructor ({ size, signed }) {
     super()
     this.size = size | 0
-    if (signed) { throw new Error('Signed integers not implemented') }
+    this.signed = signed | 0
   }
 
   read (buf) {
@@ -177,14 +184,27 @@ export class int extends Numeric {
     let i = 0
     while (i < l && i < 4) { res += buf[i] << (i++ * 8) }
     while (i < l) { res += buf[i] * Math.pow(2, i++ * 8) }
+    if (this.signed && (buf[0] & 0x80)) {
+      res -= 0x80
+      res *= -1
+    }
     return res
   }
 
   write (buf, val) {
     const l = this.size
-    let i = 0
-    while (i < l && i < 4) { buf[i] = (val >>> (i++ * 8)) & 0xFF }
-    while (i < l) { buf[i] = (val / Math.pow(2, i++ * 8)) & 0xFF }
+    let i = this.signed
+    let offset = 0
+    if (this.signed) {
+      buf[0] = (val & 0x7F) | ((val < 0) << 7)
+      offset += 7
+    }
+    for (; i < l && i < 4; i++, offset += 8) {
+      buf[i] = (val >>> offset) & 0xFF
+    }
+    for (; i < l; i++, offset += 8) {
+      buf[i] = (val / Math.pow(2, offset)) & 0xFF
+    }
   }
 }
 export class lint extends int {
@@ -194,6 +214,10 @@ export class lint extends int {
     for (let i = 0; i < l; i++) {
       res += buf[l - i - 1] * Math.pow(2, i * 8)
     }
+    if (this.signed && (buf[0] & 0x80)) {
+      res -= 0x80 * Math.pow(2, (l - 1) * 8)
+      res *= -1
+    }
     return res
   }
 
@@ -201,6 +225,9 @@ export class lint extends int {
     const l = this.size
     for (let i = 0; i < l; i++) {
       buf[l - i - 1] = (val / Math.pow(2, i * 8)) & 0xFF
+    }
+    if (this.signed) {
+      buf[0] = (buf[0] & 0x7F) | ((val < 0) << 7)
     }
   }
 }
