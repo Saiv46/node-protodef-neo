@@ -44,14 +44,14 @@ export class mapper extends Complex {
       if (!isNaN(parseInt(k))) { k = parseInt(k) }
       this.keys.set(k, v)
       this.values.set(v, k)
-      this.sizes.set(v, this.type.sizeWrite(k))
+      this.sizes.set(v, () => this.type.sizeWrite(k))
     }
   }
 
   read (buf) { return this.keys.get(this.type.read(buf)) }
   write (buf, val) { this.type.write(buf, this.values.get(val)) }
   sizeRead (buf) { return this.type.sizeRead(buf) }
-  sizeWrite (val) { return this.sizes.get(val) }
+  sizeWrite (val) { return this.sizes.get(val)() }
 }
 
 export class pstring extends Countable {
