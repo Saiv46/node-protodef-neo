@@ -135,7 +135,6 @@ export class LazyDatatype {
   }
 
   get () {
-    this.hotness++
     if (this.datatype !== null) return this.datatype
     const [Type, params] = Array.isArray(this.constructArguments)
       ? this.constructArguments
