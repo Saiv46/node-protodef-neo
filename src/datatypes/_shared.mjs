@@ -8,6 +8,8 @@
 // back to "lazy" state if they not "hot" enough
 const { NESTING_LAZYNESS = 0 } = process.env
 
+export const ANONYMOUS_FIELD = Symbol.for('ANONYMOUS_FIELD')
+
 export class Context {
   constructor (parent) {
     this.fields = new Map()
@@ -55,7 +57,16 @@ export class Context {
   }
 
   has (field) { return this.fields.has(field) }
-  set (name, value) { this.fields.set(name, value); return this }
+  set (name, value) {
+    if (name === ANONYMOUS_FIELD) {
+      for (const k in value) {
+        this.fields.set(k, value[k])
+      }
+    } else {
+      this.fields.set(name, value)
+    }
+    return this
+  }
 }
 
 let NESTING = NESTING_LAZYNESS < 1 ? 1 : 0
