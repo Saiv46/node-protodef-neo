@@ -20,6 +20,7 @@
   },
   "scripts": {
     "test": "ava",
+    "coverage": "nyc ava",
     "bench": "cross-env NODE_ENV=benchmark ava --serial --timeout=1m",
     "lint": "standard --fix"
   },
@@ -55,6 +56,8 @@
     "ava": "^3.13.0",
     "chuhai": "^1.2.0",
     "cross-env": "^7.0.2",
-    "standard": "^16.0.3"
-  }
+    "standard": "^16.0.3",
+    "nyc": "^15.1.0"
+  },
+  "files": ["src/**"]
 }

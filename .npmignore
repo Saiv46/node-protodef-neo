@@ -1,6 +1,0 @@
-.vscode/
-docs/
-tests/
-coverage
-.nyc_output
-.env

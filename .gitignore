@@ -1,4 +1,6 @@
 package-lock.json
+.vscode
+*.cpuprofile
 # Logs
 logs
 *.log
