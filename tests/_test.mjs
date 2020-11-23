@@ -2,35 +2,41 @@ import test from 'ava'
 import suite from 'chuhai'
 import { Context } from '../src/datatypes/_shared.mjs'
 
-export function benchType (name, inst, buffer, value, cb = () => {}) {
-  return s => {
-    s.bench(`${name} : sizeWrite()`, () => inst.sizeWrite(value))
-    s.bench(`${name} : write()`, () => inst.write(buffer, value))
-    s.bench(`${name} : sizeRead()`, () => inst.sizeRead(buffer))
-    s.bench(`${name} : read()`, () => inst.read(buffer))
-    cb()
-  }
-}
+function benchRead (inst, buffer) { return inst.read(buffer) }
+function benchWrite (inst, buffer, value) { return inst.write(buffer, value) }
+function benchSizeRead (inst, buffer) { return inst.sizeRead(buffer) }
+function benchSizeWrite (inst, value) { return inst.sizeWrite(value) }
 
 export default function ({ type: Type, value, bytes = 0, params = {}, name }) {
   if (!name) {
     name = Type.name
   }
-  const instance = new Type(params, new Context())
+  const instance = typeof Type !== 'function' ? Type : new Type(params, new Context())
   const buffer = Buffer.alloc(bytes)
-  test(name, async t => {
-    if (process.env.NODE_ENV === 'benchmark') {
-      await suite(name, benchType(name, instance, buffer, value, () => t.pass()))
-      return
-    }
-    t.log('Expected value:', value, `(${bytes} bytes)`)
+
+  if (process.env.NODE_ENV === 'benchmark') {
+    test(name, t => suite(name, s => {
+      t.pass('Benchmarking...')
+      s.bench(`${name} : sizeWrite()`, benchSizeWrite.bind(this, instance, value))
+      s.bench(`${name} : write()`, benchWrite.bind(this, instance, buffer, value))
+      s.bench(`${name} : sizeRead()`, benchSizeRead.bind(this, instance, buffer))
+      s.bench(`${name} : read()`, benchRead.bind(this, instance, buffer))
+    }))
+    return
+  }
+
+  test(name, t => {
     t.deepEqual(instance.sizeWrite(value), bytes)
     t.notThrows(() => instance.write(buffer, value))
     t.deepEqual(instance.sizeRead(buffer), bytes)
+
     const res = instance.read(buffer)
-    t.log('Got buffer -', buffer.inspect(), '| value -', res)
-    if (typeof res === 'number') {
-      t.assert(Math.abs(res - value) < Number.EPSILON, `${res} and ${value} are not equal`)
+    t.teardown(() => {
+      if (t.passed) return
+      t.log('Got buffer -', buffer.inspect(), `(${buffer.length} bytes)`)
+    })
+    if (typeof value === 'number' && !Number.isInteger(value)) {
+      t.assert(Math.abs(res - value) < Number.EPSILON, `${res} (actual) and ${value} (expected) are not equal`)
     } else {
       t.deepEqual(res, value)
     }

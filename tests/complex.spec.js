@@ -1,5 +1,5 @@
-import testType from '../_test.mjs'
-import * as dt from '../../src/datatypes/index.mjs'
+import testType from './_test.mjs'
+import * as dt from '../src/datatypes/index.mjs'
 
 testType({
   name: 'container (no countFields)',
