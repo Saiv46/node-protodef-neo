@@ -1,6 +1,6 @@
 {
   "name": "protodef-neo",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "ProtoDef reimplementation on Node.JS",
   "module": "./src/index.mjs",
   "main": "./src/index.cjs",
@@ -22,6 +22,7 @@
     "test": "ava",
     "coverage": "nyc ava",
     "bench": "cross-env NODE_ENV=benchmark ava --serial --timeout=1m",
+    "bench:compiled": "cross-env PROTODEF_COMPILE_STRUCTS=1 npm run bench",
     "lint": "standard --fix"
   },
   "repository": "github:Saiv46/node-protodef-neo",
@@ -38,9 +39,8 @@
   },
   "ava": {
     "verbose": true,
-    "require": [
-      "esm"
-    ]
+    "require": ["esm"],
+    "files": ["tests/**/*.spec.js"]
   },
   "nyc": {
     "instrument": true,
