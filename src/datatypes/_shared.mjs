@@ -6,7 +6,7 @@
 // - -1 = Never destruct (see below)
 // After some time datatypes got destructed
 // back to "lazy" state if they not "hot" enough
-const { NESTING_LAZYNESS = 100 } = process.env
+const { PROTODEF_LAZYNESS = 100 } = process.env
 
 export const ANONYMOUS_FIELD = Symbol.for('ANONYMOUS_FIELD')
 
@@ -69,7 +69,7 @@ export class Context {
   }
 }
 
-let NESTING = NESTING_LAZYNESS < 1 ? 1 : 0
+let NESTING = PROTODEF_LAZYNESS < 1 ? 1 : 0
 export class Complex {
   constructor (context) {
     if (!context) {
@@ -80,7 +80,7 @@ export class Complex {
 
   constructDatatype (Data) {
     if (!Array.isArray(Data)) return new Data()
-    if (NESTING > NESTING_LAZYNESS) {
+    if (NESTING > PROTODEF_LAZYNESS) {
       return new LazyDatatype(Data, this.context)
     }
     NESTING++
@@ -156,7 +156,7 @@ export class LazyDatatype extends Complex {
   get () {
     this.hotness++
     if (this.datatype !== null) return this.datatype
-    this.hotness += NESTING_LAZYNESS
+    this.hotness += PROTODEF_LAZYNESS
     const [Type, params] = Array.isArray(this.arguments)
       ? this.arguments
       : [this.arguments]
@@ -165,7 +165,7 @@ export class LazyDatatype extends Complex {
     } else {
       this.datatype = new Type()
     }
-    if (NESTING_LAZYNESS < 0) {
+    if (PROTODEF_LAZYNESS < 0) {
       this.arguments = null
       this.context = null
     } else {
@@ -175,7 +175,7 @@ export class LazyDatatype extends Complex {
   }
 
   cleanup () {
-    if (this.hotness < NESTING_LAZYNESS) {
+    if (this.hotness < PROTODEF_LAZYNESS) {
       this.datatype = null
       clearInterval(this.timer)
       this.timer = 0

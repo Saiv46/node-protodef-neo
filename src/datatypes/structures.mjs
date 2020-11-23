@@ -1,4 +1,5 @@
 import { Complex, Countable, ANONYMOUS_FIELD } from './_shared.mjs'
+const { PROTODEF_COMPILE_STRUCTS = 0 } = process.env
 
 export class array extends Countable {
   constructor ({ type, ...count }, context) {
@@ -102,12 +103,14 @@ export class count extends Complex {
 }
 
 export class container extends Complex {
+  get ANONYMOUS_FIELD () { return ANONYMOUS_FIELD }
+
   constructor (fields, context) {
     super(context.child())
     this.fields = new Map()
     for (const { name, type, anon = false } of fields) {
       this.fields.set(
-        anon ? ANONYMOUS_FIELD : name,
+        anon ? this.ANONYMOUS_FIELD : name,
         this.constructDatatype(type)
       )
     }
@@ -115,6 +118,38 @@ export class container extends Complex {
     // If none of provided fields uses context - we can skip that
     if (!Array.from(this.fields.values()).some(v => v instanceof Complex)) {
       this.context = null
+    }
+
+    if (PROTODEF_COMPILE_STRUCTS) {
+      let readCode = 'const res = {}\nlet b = 0\n'
+      for (const [name] of this.fields) {
+        if (name === ANONYMOUS_FIELD) {
+          readCode += `{
+            const type = this.fields.get(this.ANONYMOUS_FIELD)
+            const view = buf.slice(b)
+            b += type.sizeRead(view)
+            const value = type.read(view)
+            if (typeof value === 'object') {
+              for (const k in value) {
+                res[k] = value[k]
+                ${this.context ? 'this.context.set(k, value[k])' : ''}
+              }
+            }
+          }\n`
+        } else {
+          readCode += `{
+            const type = this.fields.get("${name}")
+            const view = buf.slice(b)
+            b += type.sizeRead(view)
+            const value = type.read(view)
+            res["${name}"] = value
+            ${this.context ? 'this.context.set("' + name + '", value)' : ''}
+          }\n`
+        }
+      }
+      readCode += 'return res'
+      // eslint-disable-next-line no-new-func
+      this.read = new Function('buf', readCode)
     }
   }
 

@@ -2,7 +2,7 @@ import testType from './_test.mjs'
 import * as dt from '../src/datatypes/index.mjs'
 
 testType({
-  name: 'container (no countFields)',
+  name: 'container (nested + array)',
   type: dt.container,
   value: {
     active: true,
@@ -75,7 +75,7 @@ testType({
 })
 
 testType({
-  name: 'switch + countFields',
+  name: 'array (container + switch)',
   type: dt.array,
   value: [
     { type: 1 },
@@ -143,7 +143,7 @@ for (let i = 16, v = recursionValue; i > -1; i--) {
 }
 
 testType({
-  name: 'recursion',
+  name: 'recursion (container + switch)',
   type: recursion[0],
   value: recursionValue,
   bytes: recursionBytes,
