@@ -23,8 +23,8 @@ export class cstring {
   read (buf) { return buf.toString(undefined, 0, this.sizeRead(buf) - 1) }
   write (buf, val) { buf[buf.write(val)] = 0 }
   sizeRead (buf) {
-    for (let i = 0; i < buf.length; i++) {
-      if (buf[i] === 0) return i + 1
+    for (let i = 0; i < buf.length;) {
+      if (buf[i++] === 0) return i
     }
     throw new PartialReadError()
   }

@@ -4,23 +4,25 @@ import { Complex } from './_shared.mjs'
 class Switch extends Complex {
   constructor ({ compareTo, compareToValue, fields, default: def = Void }, context) {
     super(context)
-    this.compareMode = compareTo !== undefined && compareToValue === undefined
-    this.compareTo = compareTo
-    this.compareToValue = compareToValue
+    this.compareField = compareTo
+    this.compareValue = compareToValue
+    this.compare = (compareTo !== undefined && compareToValue === undefined)
+      ? this._compareField
+      : this._compareValue
 
-    this.fields = {}
+    this.fields = new Map()
     for (const name in fields) {
-      this.fields[name] = this.constructDatatype(fields[name])
+      this.fields.set(isNaN(name) ? name : +name, this.constructDatatype(fields[name]))
     }
     this.default = this.constructDatatype(def)
   }
 
+  _compareField () { return this.context.get(this.compareField) }
+  _compareValue () { return this.compareValue }
+
   _getType () {
-    const value = this.compareMode
-      ? this.context.get(this.compareTo)
-      : this.compareToValue
-    const field = this.fields[value]
-    return field !== undefined ? field : this.default
+    const value = this.compare()
+    return this.fields.has(value) ? this.fields.get(value) : this.default
   }
 
   read (buf) { return this._getType().read(buf) }

@@ -6,7 +6,7 @@
 // - -1 = Never destruct (see below)
 // After some time datatypes got destructed
 // back to "lazy" state if they not "hot" enough
-const { NESTING_LAZYNESS = 0 } = process.env
+const { NESTING_LAZYNESS = 100 } = process.env
 
 export const ANONYMOUS_FIELD = Symbol.for('ANONYMOUS_FIELD')
 
@@ -158,7 +158,8 @@ export class LazyDatatype extends Complex {
     if (this.datatype !== null) return this.datatype
     this.hotness += NESTING_LAZYNESS
     const [Type, params] = Array.isArray(this.arguments)
-      ? this.arguments : [this.arguments]
+      ? this.arguments
+      : [this.arguments]
     if (params !== undefined) {
       this.datatype = new Type(params, this.context)
     } else {

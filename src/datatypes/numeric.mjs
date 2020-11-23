@@ -141,6 +141,7 @@ export class varint {
     let res = 0
     for (let i = 0; i < buf.length; i++) {
       res += (buf[i] & 0x7F) * Math.pow(2, i * 7)
+      if (buf[i] < 0x80) break
     }
     return res
   }

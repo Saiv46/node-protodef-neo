@@ -1,28 +1,49 @@
-import { Complex, Countable } from './_shared.mjs'
+import { Complex, Countable, ANONYMOUS_FIELD } from './_shared.mjs'
 
 export class array extends Countable {
   constructor ({ type, ...count }, context) {
     super(count, context)
     this.type = this.constructDatatype(type)
+    if (!(this.type instanceof Complex) && !this.countFor) {
+      this.context = null
+    }
   }
 
   read (buf) {
-    const l = this.readCount(buf)
     const res = []
-    for (let i = 0, b = this.sizeReadCount(buf); i < l; i++) {
-      const view = buf.slice(b)
-      b += this.type.sizeRead(view)
-      res.push(this.type.read(view))
+    const l = this.readCount(buf)
+    let b = this.sizeReadCount(buf)
+    if (this.context) {
+      for (let i = 0; i < l; i++) {
+        const view = buf.slice(b)
+        b += this.type.sizeRead(view)
+        const value = this.type.read(view)
+        res.push(value)
+        this.context.set(i, value)
+      }
+    } else {
+      for (let i = 0; i < l; i++) {
+        const view = buf.slice(b)
+        b += this.type.sizeRead(view)
+        res.push(this.type.read(view))
+      }
     }
     return res
   }
 
   write (buf, val) {
-    const l = val.length
-    this.writeCount(buf, l)
-    for (let i = 0, b = this.sizeWriteCount(l); i < l; i++) {
-      this.type.write(buf.slice(b), val[i])
-      b += this.type.sizeWrite(val[i])
+    let b = this.sizeWriteCount(val.length)
+    this.writeCount(buf, val.length)
+    if (this.context) {
+      for (let i = 0; i < val.length; i++) {
+        const value = val[i]
+        this.type.write(buf.slice(b, b += this.type.sizeWrite(value)), value)
+        this.context.set(i, value)
+      }
+    } else {
+      for (const value of val) {
+        this.type.write(buf.slice(b, b += this.type.sizeWrite(value)), value)
+      }
     }
   }
 
@@ -30,7 +51,9 @@ export class array extends Countable {
     const l = this.readCount(buf)
     let size = this.sizeReadCount(buf)
     for (let i = 0; i < l; i++) {
-      size += this.type.sizeRead(buf.slice(size))
+      const view = buf.slice(size)
+      size += this.type.sizeRead(view)
+      if (this.context) this.context.set(i, this.type.read(view))
     }
     return size
   }
@@ -38,8 +61,16 @@ export class array extends Countable {
   sizeWrite (val) {
     const l = val.length
     let size = this.sizeWriteCount(l)
-    for (let i = 0; i < l; i++) {
-      size += this.type.sizeWrite(val[i])
+    if (this.context) {
+      for (let i = 0; i < l; i++) {
+        const value = val[i]
+        size += this.type.sizeWrite(value)
+        this.context.set(i, value)
+      }
+    } else {
+      for (const value of val) {
+        size += this.type.sizeWrite(value)
+      }
     }
     return size
   }
@@ -50,16 +81,19 @@ export class count extends Complex {
     super(context)
     this.countFor = countFor
     this.type = this.constructDatatype(type)
+    if (!(this.type instanceof Complex) && !this.countFor) {
+      this.context = null
+    }
   }
 
   read (buf) {
     const value = this.type.read(buf)
-    this.context.set(this.countFor, value)
+    if (this.context) this.context.set(this.countFor, value)
     return value
   }
 
   write (buf, val) { // TODO: Reimplement
-    this.context.set(this.countFor, val)
+    if (this.context) this.context.set(this.countFor, val)
     this.type.write(buf, val)
   }
 
@@ -67,7 +101,6 @@ export class count extends Complex {
   sizeWrite (val) { return this.type.sizeWrite(val) }
 }
 
-const ANONYMOUS_FIELD = Symbol.for('ANONYMOUS_FIELD')
 export class container extends Complex {
   constructor (fields, context) {
     super(context.child())
@@ -78,9 +111,11 @@ export class container extends Complex {
         this.constructDatatype(type)
       )
     }
+
     // If none of provided fields uses context - we can skip that
-    this.skipContext = !Array.from(this.fields.values())
-      .some(v => v instanceof Complex)
+    if (!Array.from(this.fields.values()).some(v => v instanceof Complex)) {
+      this.context = null
+    }
   }
 
   read (buf) {
@@ -94,14 +129,11 @@ export class container extends Complex {
         if (typeof value !== 'object') continue
         for (const k in value) {
           res[k] = value[k]
-          if (this.skipContext) continue
-          this.context.set(k, value[k])
         }
-        continue
+      } else {
+        res[name] = value
       }
-      res[name] = value
-      if (this.skipContext) continue
-      this.context.set(name, value)
+      if (this.context) this.context.set(name, value)
     }
     return res
   }
@@ -109,18 +141,9 @@ export class container extends Complex {
   write (buf, val) {
     let b = 0
     for (const [name, type] of this.fields) {
-      if (name === ANONYMOUS_FIELD) {
-        type.write(buf.slice(b, b += type.sizeWrite(val)), val)
-        if (this.skipContext) continue
-        for (const k in val) {
-          this.context.set(k, val[k])
-        }
-        continue
-      }
-      const value = val[name]
+      const value = name !== ANONYMOUS_FIELD ? val[name] : val
       type.write(buf.slice(b, b += type.sizeWrite(value)), value)
-      if (this.skipContext) continue
-      this.context.set(name, value)
+      if (this.context) this.context.set(name, value)
     }
   }
 
@@ -129,16 +152,7 @@ export class container extends Complex {
     for (const [name, type] of this.fields) {
       const view = buf.slice(b)
       b += type.sizeRead(view)
-      if (this.skipContext) continue
-      const value = type.read(view)
-      if (name === ANONYMOUS_FIELD) {
-        for (const k in value) {
-          this.context.set(k, value[k])
-        }
-        continue
-      }
-      if (this.skipContext) continue
-      this.context.set(name, value)
+      if (this.context) this.context.set(name, type.read(view))
     }
     return b
   }
@@ -146,18 +160,9 @@ export class container extends Complex {
   sizeWrite (val) {
     let b = 0
     for (const [name, type] of this.fields) {
-      if (name === ANONYMOUS_FIELD) {
-        b += type.sizeWrite(val)
-        if (this.skipContext) continue
-        for (const k in val) {
-          this.context.set(k, val[k])
-        }
-        continue
-      }
-      const value = val[name]
+      const value = name !== ANONYMOUS_FIELD ? val[name] : val
       b += type.sizeWrite(value)
-      if (this.skipContext) continue
-      this.context.set(name, value)
+      if (this.context) this.context.set(name, value)
     }
     return b
   }
