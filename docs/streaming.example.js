@@ -34,4 +34,5 @@ const proto = new Protocol({
 const mux = proto.createSerializer('main.packet')
 const dmx = proto.createDeserializer('main.packet')
 
-// (`.pipe()` it anywhere)
+mux.pipe(dmx)
+// This line above is here because ESLint complains about unused variables

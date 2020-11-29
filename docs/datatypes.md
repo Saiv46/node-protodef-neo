@@ -25,9 +25,9 @@ Extends `ComplexDatatype` to simpily field [counting](https://github.com/ProtoDe
 ### [constructor] ( options: **Object|Array|Function|any**, context: **Context** )
 In constructor must call `super(options, context)` to setup counting and context. Includes `ComplexDatatype` methods
 ### readCount ( buf: Buffer )
-Reads count from buffer, use `sizeReadCount` to read contents
+Reads count from buffer, use `sizeReadCount` before reading contents
 ### writeCount ( buf: Buffer, val: Number )
-Write count in buffer, use `sizeWriteCount` to write contents
+Write count in buffer, use `sizeWriteCount` before writing contents
 ### sizeReadCount ( buf: Buffer )
 ### sizeWriteCount ( val: Number )
 
