@@ -25,7 +25,7 @@
 ### Module `protodef-neo/datatypes`
 (`protodef-neo/src/datatypes.cjs` for Node <= 12)
 
-All default datatypes from [specification](https://github.com/Saiv46/ProtoDef/blob/master/doc/datatypes.md)
+All default datatypes from [specification](https://github.com/ProtoDef-io/ProtoDef/blob/master/doc/datatypes.md)
 
 ### Module `protodef-neo/protodef`
 (`protodef-neo/src/legacy.cjs` for Node <= 12)
