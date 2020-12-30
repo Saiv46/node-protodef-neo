@@ -23,10 +23,9 @@ export class cstring {
   read (buf) { return buf.toString(undefined, 0, this.sizeRead(buf) - 1) }
   write (buf, val) { buf[buf.write(val)] = 0 }
   sizeRead (buf) {
-    for (let i = 0; i < buf.length;) {
-      if (buf[i++] === 0) return i
-    }
-    throw new PartialReadError()
+    const i = buf.indexOf(0)
+    if (i === -1) throw new PartialReadError()
+    return i + 1
   }
 
   sizeWrite (val) { return Buffer.byteLength(val) + 1 }
