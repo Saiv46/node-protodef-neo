@@ -4,6 +4,7 @@
   "description": "ProtoDef reimplementation on Node.JS",
   "module": "./src/index.mjs",
   "main": "./src/index.cjs",
+  "sideEffects": false,
   "exports": {
     ".": {
       "import": "./src/index.mjs",
