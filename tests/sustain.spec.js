@@ -1,34 +1,40 @@
 import Protocol from '../src/index.mjs'
 import testType from './_test.mjs'
-import { Array as _Array, Container } from '../src/datatypes/structures.mjs'
+import { array, container } from '../src/datatypes/structures.mjs'
 
-class MapEntries extends _Array {
-  constructor ({ keyType, valueType, ...count }, context) {
+/**
+ * This is not a real example or anything
+ * Just a pseudo-data of neural network
+ */
+
+class MapEntries extends array {
+  constructor({ fields: { key, value }, ...count }, context) {
     super({
       type: [
-        Container,
+        container,
         [
-          { name: 0, type: keyType },
-          { name: 1, type: valueType }
+          { name: 0, type: key },
+          { name: 1, type: value }
         ]
       ],
       ...count
     }, context)
   }
 
-  read (buf) { return Object.fromEntries(super.read(buf)) }
-  write (buf, val) { super.write(buf, Object.entries(val)) }
-  sizeRead (buf) { return super.sizeRead(buf) }
-  sizeWrite (val) { return super.sizeWrite(Object.entries(val)) }
+  read(buf) { return Object.fromEntries(super.read(buf)) }
+  write(buf, val) { super.write(buf, Object.entries(val)) }
+  sizeRead(buf) { return super.sizeRead(buf) }
+  sizeWrite(val) { return super.sizeWrite(Object.entries(val)) }
 }
 
 const proto = new Protocol({
   types: {
     u8: 'native',
-    f32: 'native',
     f64: 'native',
     bool: 'native',
     array: 'native',
+    option: 'native',
+    switch: 'native',
     varint: 'native',
     container: 'native',
     pstring: 'native',
@@ -40,21 +46,41 @@ const proto = new Protocol({
   shell: {
     types: {
       layer: [
-        'container',
-        [
-          { name: 'bias', type: 'f64' },
-          {
-            name: 'weights',
-            type: [
+        MapEntries,
+        {
+          countType: 'varint',
+          fields: {
+            key: 'short_string',
+            value: [
               MapEntries,
               {
                 countType: 'varint',
-                keyType: 'short_string',
-                valueType: 'f64'
+                fields: {
+                  key: 'short_string',
+                  value: [
+                    'switch',
+                    {
+                      compareTo: '../0',
+                      fields: {
+                        bias: 'f64',
+                        weights: [
+                          MapEntries,
+                          {
+                            countType: 'varint',
+                            fields: {
+                              key: 'short_string',
+                              value: 'f64'
+                            }
+                          }
+                        ]
+                      }
+                    }
+                  ]
+                }
               }
             ]
           }
-        ]
+        }
       ]
     },
     data: [
@@ -79,14 +105,14 @@ const proto = new Protocol({
             'container',
             [
               { name: 'iterations', type: 'varint' },
-              { name: 'errorThresh', type: 'f32' },
+              { name: 'errorThresh', type: 'f64' },
               { name: 'log', type: 'bool' },
               { name: 'logPeriod', type: 'varint' },
-              { name: 'learningRate', type: 'f32' },
-              { name: 'momentum', type: 'f32' },
+              { name: 'learningRate', type: 'f64' },
+              { name: 'momentum', type: 'f64' },
               { name: 'callbackPeriod', type: 'varint' },
-              { name: 'beta1', type: 'f32' },
-              { name: 'beta2', type: 'f32' },
+              { name: 'beta1', type: 'f64' },
+              { name: 'beta2', type: 'f64' },
               { name: 'epsilon', type: 'f64' }
             ]
           ]
@@ -194,5 +220,5 @@ testType({
   name: 'custom datatype (array > container)',
   type: proto.get('shell.data'),
   value: sampleData,
-  bytes: 53
+  bytes: 243
 })
