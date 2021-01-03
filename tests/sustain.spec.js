@@ -8,7 +8,7 @@ import { array, container } from '../src/datatypes/structures.mjs'
  */
 
 class MapEntries extends array {
-  constructor({ fields: { key, value }, ...count }, context) {
+  constructor ({ fields: { key, value }, ...count }, context) {
     super({
       type: [
         container,
@@ -21,10 +21,10 @@ class MapEntries extends array {
     }, context)
   }
 
-  read(buf) { return Object.fromEntries(super.read(buf)) }
-  write(buf, val) { super.write(buf, Object.entries(val)) }
-  sizeRead(buf) { return super.sizeRead(buf) }
-  sizeWrite(val) { return super.sizeWrite(Object.entries(val)) }
+  read (buf) { return Object.fromEntries(super.read(buf)) }
+  write (buf, val) { super.write(buf, Object.entries(val)) }
+  sizeRead (buf) { return super.sizeRead(buf) }
+  sizeWrite (val) { return super.sizeWrite(Object.entries(val)) }
 }
 
 const proto = new Protocol({
