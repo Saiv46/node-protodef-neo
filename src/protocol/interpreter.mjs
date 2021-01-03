@@ -1,5 +1,5 @@
-import ProtocolInterface from './interface.mjs'
-import { Context } from '../datatypes/_shared.mjs'
+import ProtocolInterface, { defaultDatatypes } from './interface.mjs'
+import { Context, Complex } from '../datatypes/_shared.mjs'
 
 export default class ProtocolInterpreter extends ProtocolInterface {
   constructor (...args) {
@@ -9,9 +9,39 @@ export default class ProtocolInterpreter extends ProtocolInterface {
     this.rootContext = new Context()
   }
 
+  resolveType (name) {
+    const value = this.types[name]
+    if (!value) { throw new Error(`Datatype "${name}" not defined`) }
+    if (typeof value === 'function') {
+      // eslint-disable-next-line
+      return Complex.isPrototypeOf(value) ? value : new value()
+    }
+    if (typeof value === 'string' || Array.isArray(value)) {
+      if (this.stack.has(value)) return this.stack.get(value)
+      if (!(name in defaultDatatypes)) this.stack.set(name, value)
+      const res = typeof value === 'string'
+        ? this.resolveType(value)
+        : this.resolveTypeNesting(value)
+      this.stack.delete(name)
+      this.types[name] = res
+      return res
+    }
+    throw new Error(`Invalid datatype "${name}" (${typeof value})`)
+  }
+
+  resolveTypeNesting (data) {
+    let [Type, args] = Array.isArray(data) ? data : [data]
+    if (typeof Type === 'string') {
+      Type = this.resolveType(Type)
+    } else if (Array.isArray(Type)) {
+      Type = this.resolveTypeNesting(Type)
+    }
+    return args === undefined ? Type : [Type, this._RTNloop(args)]
+  }
+
   _RTNloop (args) {
-    if (typeof args === 'string') { return this.resolveTypeNesting(args) }
-    if (Array.isArray(args)) { return args.map(this._RTNloop, this) }
+    if (typeof args === 'string') return this.resolveType(args)
+    if (Array.isArray(args)) return args.map(this._RTNloop, this)
     for (const k in args) {
       const v = args[k]
       switch (k) {
@@ -32,25 +62,6 @@ export default class ProtocolInterpreter extends ProtocolInterface {
     return args
   }
 
-  resolveTypeNesting (data) {
-    if (this.stack.has(data)) return this.stack.get(data)
-    let [Type, args] = Array.isArray(data) ? data : [data]
-
-    if (typeof Type === 'string') {
-      if (!this.types[Type]) {
-        throw new Error(`Datatype "${Type}" not defined`)
-      }
-      const _type = this.types[Type]
-      if (typeof _type !== 'function') {
-        this.stack.set(Type, _type)
-      }
-      Type = _type
-    }
-
-    if (Array.isArray(Type)) { Type = this.resolveTypeNesting(Type) }
-    return args ? [Type, this._RTNloop(args)] : Type
-  }
-
   get (name) {
     if (typeof name === 'string') {
       if (!this.cache.has(name)) {
@@ -62,12 +73,9 @@ export default class ProtocolInterpreter extends ProtocolInterface {
     if (nested.length) {
       return this.namespace[current].get(nested)
     }
-    let type = this.types[current]
-    if (!type) {
-      throw new Error(`Missing data type ${current}`)
-    }
-    type = this.resolveTypeNesting(type)
+    const type = this.resolveType(current)
     this.stack.clear()
+    if (typeof type === 'object' && !Array.isArray(type)) return type
     const [Constructor, params] = Array.isArray(type) ? type : [type]
     return new Constructor(params, this.rootContext)
   }

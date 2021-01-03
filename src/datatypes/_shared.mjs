@@ -6,8 +6,7 @@
 // - -1 = Never destruct (see below)
 // After some time datatypes got destructed
 // back to "lazy" state if they not "hot" enough
-const { PROTODEF_LAZYNESS = 100 } = process.env
-
+export const { PROTODEF_LAZYNESS = 100, PROTODEF_COMPILE_STRUCTS = 0 } = process.env
 export const ANONYMOUS_FIELD = Symbol.for('ANONYMOUS_FIELD')
 
 export class Context {
@@ -69,18 +68,20 @@ export class Context {
   }
 }
 
-let NESTING = PROTODEF_LAZYNESS < 1 ? 1 : 0
+export let NESTING = PROTODEF_LAZYNESS < 1 ? 1 : 0
 export class Complex {
   constructor (context) {
-    if (!context) {
+    if (!context || !(context instanceof Context)) {
       throw new Error('No context passed')
     }
     this.context = context
+    this.isComplex = false
   }
 
   constructDatatype (Data) {
-    if (!Array.isArray(Data)) return new Data()
+    if (!Array.isArray(Data)) return typeof Data === 'function' ? new Data() : Data
     if (NESTING > PROTODEF_LAZYNESS) {
+      this.isComplex = true
       return new LazyDatatype(Data, this.context)
     }
     NESTING++
@@ -98,7 +99,15 @@ export class Complex {
       : new Type(params, this.context)
 
     NESTING--
+    if (res instanceof Complex && res.isComplex) this.isComplex = true
     return res
+  }
+
+  purgeContext () {
+    if (this.isComplex || this.context === null) return
+    if (this.context.parent) this.context.parent.childrens.delete(this.context)
+    this.context.childrens.clear()
+    this.context = null
   }
 }
 
@@ -110,6 +119,7 @@ export class Countable extends Complex {
     } else if (typeof count === 'number') {
       this.fixedSize = count
     } else if (typeof count === 'string') {
+      this.isComplex = true
       this.countField = count
     } else {
       throw new Error('No count field passed')
@@ -139,9 +149,10 @@ export class PartialReadError extends Error {
   constructor () {
     super()
     this.name = this.constructor.name
-    this.partialReadError = true
     Error.captureStackTrace(this, this.constructor.name)
   }
+
+  get partialReadError () { return true }
 }
 
 export class LazyDatatype extends Complex {
