@@ -13,8 +13,8 @@ class MapEntries extends array {
       type: [
         container,
         [
-          { name: 0, type: key },
-          { name: 1, type: value }
+          { name: '0', type: key },
+          { name: '1', type: value }
         ]
       ],
       ...count
@@ -60,7 +60,7 @@ const proto = new Protocol({
                   value: [
                     'switch',
                     {
-                      compareTo: '../0',
+                      compareTo: '0',
                       fields: {
                         bias: 'f64',
                         weights: [
@@ -220,5 +220,5 @@ testType({
   name: 'custom datatype (array > container)',
   type: proto.get('shell.data'),
   value: sampleData,
-  bytes: 243
+  bytes: 702
 })
