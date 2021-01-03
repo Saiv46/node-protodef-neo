@@ -149,7 +149,7 @@ export class varint {
   write (buf, val) {
     let i = 0
     while (val > INT) {
-      buf[i++] = (val & 0xFF) | 0x80
+      buf[i++] = (val % 0xFF) | 0x80
       val /= 128
     }
     while (val > 0x7F) {
@@ -167,7 +167,7 @@ export class varint {
   }
 
   sizeWrite (val) {
-    return Math.ceil(Math.log2(Math.max(Math.abs(val), 127)) / LOG2)
+    return value >= 0 ? Math.ceil(Math.log2(Math.max(value, 127)) / LOG2) : 5
   }
 }
 export { varint as lvarint, varint as bvarint }
