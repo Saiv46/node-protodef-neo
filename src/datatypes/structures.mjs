@@ -1,20 +1,20 @@
-import { Complex, Countable, ANONYMOUS_FIELD } from './_shared.mjs'
-const { PROTODEF_COMPILE_STRUCTS = 0 } = process.env
+import {
+  Complex, Countable, ANONYMOUS_FIELD, NESTING,
+  PROTODEF_LAZYNESS, PROTODEF_COMPILE_STRUCTS
+} from './_shared.mjs'
 
 export class array extends Countable {
   constructor ({ type, ...count }, context) {
     super(count, context)
     this.type = this.constructDatatype(type)
-    if (!(this.type instanceof Complex) && !this.countFor) {
-      this.context = null
-    }
+    this.purgeContext()
   }
 
   read (buf) {
     const res = []
     const l = this.readCount(buf)
     let b = this.sizeReadCount(buf)
-    if (this.context) {
+    if (this.isComplex) {
       for (let i = 0; i < l; i++) {
         const view = buf.slice(b)
         b += this.type.sizeRead(view)
@@ -35,7 +35,7 @@ export class array extends Countable {
   write (buf, val) {
     let b = this.sizeWriteCount(val.length)
     this.writeCount(buf, val.length)
-    if (this.context) {
+    if (this.isComplex) {
       for (let i = 0; i < val.length; i++) {
         const value = val[i]
         this.type.write(buf.slice(b, b += this.type.sizeWrite(value)), value)
@@ -51,10 +51,16 @@ export class array extends Countable {
   sizeRead (buf) {
     const l = this.readCount(buf)
     let size = this.sizeReadCount(buf)
-    for (let i = 0; i < l; i++) {
-      const view = buf.slice(size)
-      size += this.type.sizeRead(view)
-      if (this.context) this.context.set(i, this.type.read(view))
+    if (this.isComplex) {
+      for (let i = 0; i < l; i++) {
+        const view = buf.slice(size)
+        size += this.type.sizeRead(view)
+        this.context.set(i, this.type.read(view))
+      }
+    } else {
+      for (let i = 0; i < l; i++) {
+        size += this.type.sizeRead(buf.slice(size))
+      }
     }
     return size
   }
@@ -62,7 +68,7 @@ export class array extends Countable {
   sizeWrite (val) {
     const l = val.length
     let size = this.sizeWriteCount(l)
-    if (this.context) {
+    if (this.isComplex) {
       for (let i = 0; i < l; i++) {
         const value = val[i]
         size += this.type.sizeWrite(value)
@@ -82,19 +88,17 @@ export class count extends Complex {
     super(context)
     this.countFor = countFor
     this.type = this.constructDatatype(type)
-    if (!(this.type instanceof Complex) && !this.countFor) {
-      this.context = null
-    }
+    this.purgeContext()
   }
 
   read (buf) {
     const value = this.type.read(buf)
-    if (this.context) this.context.set(this.countFor, value)
+    if (this.isComplex) this.context.set(this.countFor, value)
     return value
   }
 
   write (buf, val) { // TODO: Reimplement
-    if (this.context) this.context.set(this.countFor, val)
+    if (this.isComplex) this.context.set(this.countFor, val)
     this.type.write(buf, val)
   }
 
@@ -114,13 +118,9 @@ export class container extends Complex {
         this.constructDatatype(type)
       )
     }
+    this.purgeContext()
 
-    // If none of provided fields uses context - we can skip that
-    if (!Array.from(this.fields.values()).some(v => v instanceof Complex)) {
-      this.context = null
-    }
-
-    if (PROTODEF_COMPILE_STRUCTS) {
+    if (PROTODEF_COMPILE_STRUCTS && NESTING < PROTODEF_LAZYNESS) {
       let readCode = 'const res = {}\nlet b = 0\n'
       for (const [name] of this.fields) {
         if (name === ANONYMOUS_FIELD) {
@@ -132,7 +132,7 @@ export class container extends Complex {
             if (typeof value === 'object') {
               for (const k in value) {
                 res[k] = value[k]
-                ${this.context ? 'this.context.set(k, value[k])' : ''}
+                ${this.isComplex ? 'this.context.set(k, value[k])' : ''}
               }
             }
           }\n`
@@ -143,7 +143,7 @@ export class container extends Complex {
             b += type.sizeRead(view)
             const value = type.read(view)
             res["${name}"] = value
-            ${this.context ? 'this.context.set("' + name + '", value)' : ''}
+            ${this.isComplex ? 'this.context.set("' + name + '", value)' : ''}
           }\n`
         }
       }
@@ -168,7 +168,7 @@ export class container extends Complex {
       } else {
         res[name] = value
       }
-      if (this.context) this.context.set(name, value)
+      if (this.isComplex) this.context.set(name, value)
     }
     return res
   }
@@ -178,16 +178,22 @@ export class container extends Complex {
     for (const [name, type] of this.fields) {
       const value = name !== ANONYMOUS_FIELD ? val[name] : val
       type.write(buf.slice(b, b += type.sizeWrite(value)), value)
-      if (this.context) this.context.set(name, value)
+      if (this.isComplex) this.context.set(name, value)
     }
   }
 
   sizeRead (buf) {
     let b = 0
-    for (const [name, type] of this.fields) {
-      const view = buf.slice(b)
-      b += type.sizeRead(view)
-      if (this.context) this.context.set(name, type.read(view))
+    if (this.isComplex) {
+      for (const [name, type] of this.fields) {
+        const view = buf.slice(b)
+        b += type.sizeRead(view)
+        this.context.set(name, type.read(view))
+      }
+    } else {
+      for (const type of this.fields.values()) {
+        b += type.sizeRead(buf.slice(b))
+      }
     }
     return b
   }
@@ -197,7 +203,7 @@ export class container extends Complex {
     for (const [name, type] of this.fields) {
       const value = name !== ANONYMOUS_FIELD ? val[name] : val
       b += type.sizeWrite(value)
-      if (this.context) this.context.set(name, value)
+      if (this.isComplex) this.context.set(name, value)
     }
     return b
   }

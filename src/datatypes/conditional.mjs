@@ -6,7 +6,8 @@ class Switch extends Complex {
     super(context)
     this.compareField = compareTo
     this.compareValue = compareToValue
-    this.compare = (compareTo !== undefined && compareToValue === undefined)
+    this.isComplex = compareTo !== undefined && compareToValue === undefined
+    this.compare = this.isComplex
       ? this._compareField
       : this._compareValue
 
