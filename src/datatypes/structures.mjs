@@ -136,6 +136,7 @@ export class container extends Complex {
               }
             }
           }\n`
+          break
         } else {
           readCode += `{
             const type = this.fields.get("${name}")
