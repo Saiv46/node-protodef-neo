@@ -12,35 +12,29 @@ jobs:
       - uses: actions/checkout@v3
       - uses: actions/setup-node@v3
         with:
-          node-version: 12
+          node-version: 16
       - uses: actions/cache@v3
         with:
           path: ~/.npm
-          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+          key: ${{ runner.os }}-node
           restore-keys: |
-            ${{ runner.os }}-node-
+            ${{ runner.os }}-node
       - run: npm install
       - run: npm run lint
   test:
     needs: lint
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        index: [1, 2, 3]
-    env:
-      CI_NODE_INDEX: ${{ matrix.index }}
-      CI_NODE_TOTAL: 3
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-node@v3
         with:
-          node-version: 12
+          node-version: 16
       - uses: actions/cache@v3
         with:
           path: ~/.npm
-          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+          key: ${{ runner.os }}-node
           restore-keys: |
-            ${{ runner.os }}-node-
+            ${{ runner.os }}-node
       - run: npm install
       - run: npm test
 
