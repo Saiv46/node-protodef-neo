@@ -2,22 +2,12 @@
   "name": "protodef-neo",
   "version": "0.1.1",
   "description": "ProtoDef reimplementation on Node.JS",
-  "module": "./src/index.mjs",
-  "main": "./src/index.cjs",
+  "type": "module",
   "sideEffects": false,
   "exports": {
-    ".": {
-      "import": "./src/index.mjs",
-      "require": "./src/index.cjs"
-    },
-    "./datatypes": {
-      "import": "./src/datatypes/index.mjs",
-      "require": "./src/datatypes.cjs"
-    },
-    "./protodef": {
-      "import": "./src/legacy.mjs",
-      "require": "./src/legacy.cjs"
-    }
+    ".": "./src/index.js",
+    "./datatypes": "./src/datatypes/index.js",
+    "./protodef": "./src/legacy.js"
   },
   "scripts": {
     "test": "ava",
@@ -36,11 +26,10 @@
   "author": "Saiv46",
   "license": "MIT",
   "engines": {
-    "node": ">=12"
+    "node": ">=16"
   },
   "ava": {
     "verbose": true,
-    "require": ["esm"],
     "files": ["tests/**/*.spec.js"]
   },
   "nyc": {
@@ -50,8 +39,7 @@
   "bugs": "https://github.com/Saiv46/node-protodef-neo/issues",
   "homepage": "https://github.com/Saiv46/node-protodef-neo#readme",
   "dependencies": {
-    "bit-buffer": "^0.2.4",
-    "esm": "^3.2.25"
+    "bit-buffer": "^0.2.4"
   },
   "devDependencies": {
     "ava": "3.15.0",
