@@ -1,4 +1,4 @@
-import { PartialReadError } from './_shared.mjs'
+import { PartialReadError } from './_shared'
 
 export class bool {
   read (buf) { return buf[0] === 1 }

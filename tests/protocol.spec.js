@@ -1,6 +1,6 @@
 import test from 'ava'
-import Protocol from '../src/index.mjs'
-import testType from './_test.mjs'
+import Protocol from '../src/index'
+import testType from './_test'
 
 const proto = new Protocol({
   types: {

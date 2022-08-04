@@ -1,5 +1,5 @@
-import { bool, void as Void } from './primitives.mjs'
-import { Complex } from './_shared.mjs'
+import { bool, void as Void } from './primitives'
+import { Complex } from './_shared'
 
 class Switch extends Complex {
   constructor ({ compareTo, compareToValue, fields, default: def = Void }, context) {

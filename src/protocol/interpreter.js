@@ -1,5 +1,5 @@
-import ProtocolInterface, { defaultDatatypes } from './interface.mjs'
-import { Context, Complex } from '../datatypes/_shared.mjs'
+import ProtocolInterface, { defaultDatatypes } from './interface'
+import { Context, Complex } from '../datatypes/_shared'
 
 export default class ProtocolInterpreter extends ProtocolInterface {
   constructor (...args) {

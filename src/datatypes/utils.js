@@ -1,5 +1,5 @@
-import { Complex, Countable, PartialReadError } from './_shared.mjs'
-import { void as Void } from './primitives.mjs'
+import { Complex, Countable, PartialReadError } from './_shared'
+import { void as Void } from './primitives'
 import bitBuffer from 'bit-buffer'
 const { BitView } = bitBuffer
 

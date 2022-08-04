@@ -1,5 +1,0 @@
-export * from './conditional.mjs'
-export * from './primitives.mjs'
-export * from './structures.mjs'
-export * from './numeric.mjs'
-export * from './utils.mjs'

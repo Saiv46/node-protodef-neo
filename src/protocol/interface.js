@@ -1,5 +1,5 @@
 import * as defaultDatatypes from '../datatypes/index.mjs'
-import { Serializer, Deserializer } from './serializer.mjs'
+import { Serializer, Deserializer } from './serializer.js'
 export { defaultDatatypes }
 
 export default class ProtocolInterface {

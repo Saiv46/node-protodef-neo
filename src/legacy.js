@@ -1,10 +1,10 @@
-import Interpreter from './protocol/interpreter.mjs'
+import Interpreter from './protocol/interpreter'
 import {
   Serializer as _Serializer,
   Deserializer as _Deserializer
-} from './protocol/serializer.mjs'
-import * as utils from './datatypes/_shared.mjs'
-import * as types from './datatypes/index.mjs'
+} from './protocol/serializer'
+import * as utils from './datatypes/_shared'
+import * as types from './datatypes'
 export { types, utils }
 
 // Trying to make it backward-compatible

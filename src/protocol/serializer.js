@@ -1,4 +1,4 @@
-import { Transform } from 'stream' // TODO: Use readable-stream
+import { Transform } from 'stream'
 
 export class Serializer extends Transform {
   constructor (inst) {
