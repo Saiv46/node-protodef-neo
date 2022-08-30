@@ -185,23 +185,18 @@ export class int extends Numeric {
     let i = 0
     while (i < l && i < 4) { res += buf[i] << (i++ * 8) }
     while (i < l) { res += buf[i] * Math.pow(2, i++ * 8) }
-    if (this.signed && (buf[0] & 0x80)) {
-      res -= 0x80
-      res *= -1
+    if (this.signed && (buf[l - 1] & 0x80)) {
+      res -= Math.pow(2, this.size * 8) - 1
     }
     return res
   }
 
   write (buf, val) {
     const l = this.size
-    let i = this.signed
+    let i = 0
     let offset = 0
-    if (this.signed) {
-      buf[0] = (val & 0x7F) | ((val < 0) << 7)
-      offset += 7
-    }
-    for (; i < l && i < 4; i++, offset += 8) {
-      buf[i] = (val >>> offset) & 0xFF
+    if (this.signed && val < 0) {
+      val += Math.pow(2, 8 * l) - 1
     }
     for (; i < l; i++, offset += 8) {
       buf[i] = (val / Math.pow(2, offset)) & 0xFF
@@ -216,19 +211,18 @@ export class lint extends int {
       res += buf[l - i - 1] * Math.pow(2, i * 8)
     }
     if (this.signed && (buf[0] & 0x80)) {
-      res -= 0x80 * Math.pow(2, (l - 1) * 8)
-      res *= -1
+      res -= Math.pow(2, this.size * 8) - 1
     }
     return res
   }
 
   write (buf, val) {
     const l = this.size
+    if (this.signed && val < 0) {
+      val += Math.pow(2, 8 * l) - 1
+    }
     for (let i = 0; i < l; i++) {
       buf[l - i - 1] = (val / Math.pow(2, i * 8)) & 0xFF
-    }
-    if (this.signed) {
-      buf[0] = (buf[0] & 0x7F) | ((val < 0) << 7)
     }
   }
 }
