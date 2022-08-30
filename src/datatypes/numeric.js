@@ -1,4 +1,4 @@
-import { PartialReadError } from './_shared'
+import { PartialReadError } from './_shared.js'
 
 export class Numeric {
   sizeRead (buf) {

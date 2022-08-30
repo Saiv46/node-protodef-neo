@@ -1,7 +1,7 @@
 import {
   Complex, Countable, ANONYMOUS_FIELD, NESTING,
   PROTODEF_LAZYNESS, PROTODEF_COMPILE_STRUCTS
-} from './_shared'
+} from './_shared.js'
 
 export class array extends Countable {
   constructor ({ type, ...count }, context) {

@@ -1,7 +1,7 @@
-import testType from '../_test.mjs'
+import testType from '../_test.js'
 import {
   array, count, container, u8, u32, varint, pstring
-} from '../../src/datatypes/index.mjs'
+} from '../../src/datatypes/index.js'
 const setup = (name, type, value, bytes, params) => testType({
   name, type, value, bytes, params
 })

@@ -1,5 +1,5 @@
-import testType from '../_test.mjs'
-import * as num from '../../src/datatypes/numeric.mjs'
+import testType from '../_test.js'
+import * as num from '../../src/datatypes/numeric.js'
 const test = (k, value, bytes) => {
   testType({ name: k, type: num[k], value, bytes })
   if (!k.startsWith('l')) test(`l${k}`, value, bytes)

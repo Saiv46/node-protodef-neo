@@ -1,11 +1,11 @@
-import Compiler from './protocol/compiler'
-import Interpreter from './protocol/interpreter'
+import Compiler from './protocol/compiler.js'
+import Interpreter from './protocol/interpreter.js'
 import {
   Complex,
   Countable,
   PartialReadError
-} from './datatypes/_shared'
-import * as datatypes from './datatypes'
+} from './datatypes/_shared.js'
+import * as datatypes from './datatypes/index.js'
 
 export default Interpreter
 export {

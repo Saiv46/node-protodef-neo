@@ -1,5 +1,5 @@
-import testType from './_test'
-import * as dt from '../src/datatypes'
+import testType from './_test.js'
+import * as dt from '../src/datatypes/index.js'
 
 testType({
   name: 'container (nested + array)',

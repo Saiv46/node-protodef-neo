@@ -1,6 +1,7 @@
 import test from 'ava'
-import Protocol from '../src/index'
-import testType from './_test'
+import { promisify } from 'util'
+import Protocol from '../src/index.js'
+import testType from './_test.js'
 
 const proto = new Protocol({
   types: {
@@ -43,14 +44,11 @@ if (process.env.NODE_ENV !== 'benchmark') {
     t.throws(() => proto.get('pstring'))
     t.throws(() => proto.get('container'))
   })
-  test.cb('createSerializer()', t => {
+  test('createSerializer()', async t => {
     const mux = proto.createSerializer(id)
     const dmx = proto.createDeserializer(id)
-    mux.pipe(dmx)
-    dmx.on('data', res => t.deepEqual(val, res))
-    dmx.on('end', () => t.end())
-    mux.write(val)
-    mux.end()
+    const buf = await promisify(mux._transform.bind(mux))(val, null)
+    t.deepEqual(val, await promisify(dmx._transform.bind(dmx))(buf, null))
   })
 }
 

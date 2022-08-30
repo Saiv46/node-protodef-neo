@@ -1,6 +1,6 @@
 import test from 'ava'
 import suite from 'chuhai'
-import { Context } from '../src/datatypes/_shared.mjs'
+import { Context } from '../src/datatypes/_shared.js'
 
 function benchRead (inst, buffer) { return inst.read(buffer) }
 function benchWrite (inst, buffer, value) { return inst.write(buffer, value) }

@@ -1,7 +1,7 @@
-import testType from '../_test.mjs'
+import testType from '../_test.js'
 import {
   u8, varint, option, void as Void, switch as Switch
-} from '../../src/datatypes/index.mjs'
+} from '../../src/datatypes/index.js'
 const setup = (name, type, value, bytes, params) => testType({
   name, type, value, bytes, params
 })

@@ -1,5 +1,5 @@
-import ProtocolInterface from './interface'
-// import * as datatypes from './datatypes'
+import ProtocolInterface from './interface.js'
+// import * as datatypes from './datatypes.js'
 const FUNC_REGEX = /(?:function){0,1}\s*\w+\s*\((.*)\)\s*{\s*([\s\S]*)\s*}/
 
 /// TO BE IMPLEMENTED

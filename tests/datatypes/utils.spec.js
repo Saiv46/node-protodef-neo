@@ -1,6 +1,6 @@
-import testType from '../_test.mjs'
-import { u8 } from '../../src/datatypes/numeric.mjs'
-import * as utils from '../../src/datatypes/utils.mjs'
+import testType from '../_test.js'
+import { u8 } from '../../src/datatypes/numeric.js'
+import * as utils from '../../src/datatypes/utils.js'
 const setup = (k, value, bytes, params) => testType({
   type: utils[k], value, bytes, params
 })

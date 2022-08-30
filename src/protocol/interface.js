@@ -1,4 +1,4 @@
-import * as defaultDatatypes from '../datatypes/index.mjs'
+import * as defaultDatatypes from '../datatypes/index.js'
 import { Serializer, Deserializer } from './serializer.js'
 export { defaultDatatypes }
 

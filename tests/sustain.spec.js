@@ -1,6 +1,6 @@
-import Protocol from '../src/index'
-import testType from './_test'
-import { array, container } from '../src/datatypes/structures'
+import Protocol from '../src/index.js'
+import testType from './_test.js'
+import { array, container } from '../src/datatypes/structures.js'
 
 /**
  * This is not a real example or anything
