@@ -62,7 +62,11 @@ export class pstring extends Countable {
     buf.write(val, this.sizeWriteCount(len))
   }
 
-  sizeRead (buf) { return this.sizeReadCount(buf) + this.readCount(buf) }
+  sizeRead (buf) {
+    const size = this.sizeReadCount(buf) + this.readCount(buf)
+    if (buf.length < size) { throw new PartialReadError() }
+    return size
+  }
   sizeWrite (val) {
     const len = Buffer.byteLength(val)
     return this.sizeWriteCount(len) + len
@@ -97,7 +101,10 @@ export class bitfield {
     }
   }
 
-  sizeRead (buf) { return this.bits }
+  sizeRead (buf) {
+    if (buf.length < this.bits) { throw new PartialReadError() }
+    return this.bits
+  }
   sizeWrite (val) { return this.bits }
 }
 
