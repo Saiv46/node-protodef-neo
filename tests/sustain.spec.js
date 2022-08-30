@@ -1,5 +1,6 @@
+import test from 'ava'
+import { simpleMacro } from './macros.js'
 import Protocol from '../src/index.js'
-import testType from './_test.js'
 import { array, container } from '../src/datatypes/structures.js'
 
 /**
@@ -216,9 +217,10 @@ const sampleData = {
   }
 }
 
-testType({
-  name: 'custom datatype (array > container)',
-  type: proto.get('shell.data'),
-  value: sampleData,
-  bytes: 702
-})
+test(
+  'custom datatype (array > container)',
+  simpleMacro,
+  proto.get('shell.data'),
+  sampleData,
+  702
+)

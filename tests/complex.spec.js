@@ -1,10 +1,12 @@
-import testType from './_test.js'
+import test from 'ava'
+import { constructedMacro } from './macros.js'
 import * as dt from '../src/datatypes/index.js'
 
-testType({
-  name: 'container (nested + array)',
-  type: dt.container,
-  value: {
+test(
+  'container (nested + array)',
+  constructedMacro,
+  dt.container,
+  {
     active: true,
     name: 'Saiv46',
     level: 90,
@@ -26,8 +28,8 @@ testType({
       }
     ]
   },
-  bytes: 53,
-  params: [
+  53,
+  [
     { name: 'active', type: dt.bool },
     {
       name: 'name',
@@ -72,19 +74,20 @@ testType({
       ]
     }
   ]
-})
+)
 
-testType({
-  name: 'array (container + switch)',
-  type: dt.array,
-  value: [
+test(
+  'array (container + switch)',
+  constructedMacro,
+  dt.array,
+  [
     { type: 1 },
     { type: 2, title: 'Welcome' },
     { type: 3, subtitle: 'to the c*m zone' },
     { type: 4, id: 65535 }
   ],
-  bytes: 31,
-  params: {
+  31,
+  {
     countType: dt.varint,
     type: [
       dt.container,
@@ -108,7 +111,7 @@ testType({
       ]
     ]
   }
-})
+)
 
 const recursion = [
   dt.container,
@@ -142,10 +145,11 @@ for (let i = 16, v = recursionValue; i > -1; i--) {
   }
 }
 
-testType({
-  name: 'recursion (container + switch)',
-  type: recursion[0],
-  value: recursionValue,
-  bytes: recursionBytes,
-  params: recursion[1]
-})
+test(
+  'recursion (container + switch)',
+  constructedMacro,
+  recursion[0],
+  recursionValue,
+  recursionBytes,
+  recursion[1]
+)

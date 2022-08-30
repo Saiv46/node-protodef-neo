@@ -1,7 +1,7 @@
 import test from 'ava'
+import { simpleMacro } from './macros.js'
 import { promisify } from 'util'
 import Protocol from '../src/index.js'
-import testType from './_test.js'
 
 const proto = new Protocol({
   types: {
@@ -52,9 +52,10 @@ if (process.env.NODE_ENV !== 'benchmark') {
   })
 }
 
-testType({
-  name: `packet ( ${id} )`,
-  type: proto.get(id),
-  value: val,
-  bytes: 25
-})
+test(
+  `packet ( ${id} )`,
+  simpleMacro,
+  proto.get(id),
+  val,
+  25
+)
