@@ -44,7 +44,7 @@
     "c8": "7.14.0",
     "chuhai": "1.2.0",
     "cross-env": "7.0.3",
-    "standard": "17.0.0"
+    "standard": "17.1.0"
   },
   "files": [
     "src/**"
